@@ -4,8 +4,8 @@ This project was performed with the help of the [CIC | PCUBED](https://www.fulle
 ## Instructions 📝
    1. Clone the repo
    ```bash 
-      git clone https://github.com/jay-gleeson/Data-Science-CSUF-Summer-2024.git
-      cd Data-Science-CSUF-Summer-2024
+      git clone https://github.com/jay-gleeson/Pairs-Trading-CSUF-Summer-2025.git
+      cd Pairs-Trading-CSUF-Summer-2025
    ```
 
 ---
