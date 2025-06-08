@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 
 # Create pandas DataFrame with various financial institutions using yfinance.
-# 
-# Downloading data for Visa, Mastercard, Capital One, Chase, Citigroup, Wells Fargo, 
+#  
+# Downloading data for Visa, Mastercard, Capital One, Chase, Citigroup, Wells Fargo,  
 # American Express, Goldman Sachs, U.S. Bank, and Bank of America from June 1, 2024 to June 1, 2025.
 # 
 # Note: Only the daily adjusted close price column per each stock will be considered.
@@ -30,9 +30,18 @@ plt.title('Correlation Heatmap')
 plt.savefig('heatmap.png', dpi=300, bbox_inches='tight')
 
 
-# Using greedy methods, find min, max, variance, mean, standard deviation, 
+# Using greedy methods, find min, max, mean, variance, standard deviation, 
 # and interquartile range of stocks and download to csv for future use. 
+#
+# Find length of each column.
 # 
+# Function to find length of each column.
+def length(data):
+    count = 0
+    for n in data:
+        count += 1
+    return count
+
 # Find minimum and maximum of each stock.
 #
 # Function to find minimum daily adjusted close price.
@@ -51,26 +60,44 @@ def maximum(data):
             max = n
     return max
 
-# Find variance of each stock.  *** TO BE COMPLETED
+# Find mean price of each stock.
+# 
+# Function to find mean daily adjusted close price of each stock.
+def mean(data):
+    sum = 0
+    for n in data:
+        sum += n
+    return sum / length(data)
 
-# Find mean price of each stock.  *** TO BE COMPLETED
+# Find variance of each stock.
+# 
+# Function to find variance of each stock.
+def variance(data):
+    sumsqdev = 0
+    for n in data:
+        sumsqdev += (n - mean(data)) ** 2
+    return sumsqdev / (length(data) - 1)
 
-# Find standard deviation of each stock.  *** TO BE COMPLETED
+# Find standard deviation of each stock.
+#  
+# Function to find standard deviation of each stock.
+def stddev(data):
+    return variance(data) ** 0.5
 
 # Find interquartile range of each stock.  *** TO BE COMPLETED
 
 # Combine statistics into csv.
 #
 # Create dataframe with columns as the tickers and the rows as the statistics.
-stats = pd.DataFrame(columns=stocks, index=['Min','Max'])
+stats = pd.DataFrame(columns=stocks, index=['Min','Max','Mean','Variance','Std Dev'])
 
 # Iterate through stocks and compute each statistic.
 for ticker in stocks:
     data = df[ticker].tolist()
 
-    stats[ticker] = [minimum(data), maximum(data)]
+    stats[ticker] = [minimum(data), maximum(data), mean(data), variance(data), stddev(data)]
 
-# Save statistics to file directory. 
+# Save statistics to file directory.
 print(stats)
 stats.to_csv("stats.csv")
 
