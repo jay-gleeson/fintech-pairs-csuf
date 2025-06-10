@@ -32,7 +32,7 @@ plt.savefig('heatmap.png', dpi=300, bbox_inches='tight')
 
 # Using greedy methods, find min, max, mean, variance, standard deviation, 
 # and interquartile range of stocks and download to csv for future use. 
-#
+
 # Find length of each column.
 # 
 # Function to find length of each column.
@@ -60,6 +60,12 @@ def maximum(data):
             max = n
     return max
 
+# Find range of each stock.
+# 
+# Function to find the range of each stock.
+def spread_range(data):
+    return maximum(data) - minimum(data)
+
 # Find mean price of each stock.
 # 
 # Function to find mean daily adjusted close price of each stock.
@@ -73,29 +79,61 @@ def mean(data):
 # 
 # Function to find variance of each stock.
 def variance(data):
-    sumsqdev = 0
+    m = mean(data)
+    sum_dev = 0
+
+    # Numerator of variance formula, find sum of squared deviations.
     for n in data:
-        sumsqdev += (n - mean(data)) ** 2
-    return sumsqdev / (length(data) - 1)
+        sum_dev += (n - m) ** 2
+    return sum_dev / (length(data) - 1) #  Sample variance.
 
 # Find standard deviation of each stock.
 #  
 # Function to find standard deviation of each stock.
 def stddev(data):
-    return variance(data) ** 0.5
+    return variance(data) ** 0.5  # Square root of sample variance.
 
-# Find interquartile range of each stock.  *** TO BE COMPLETED
+# Find interquartile range of each stock.
+# 
+# Function to find interquartile range of each stock.
+def iqr(data):
+    data = data.copy()
+    L = length(data)
+
+    # Sort prices in ascending order, using selection sort for simplicity.
+    for i in range(L):
+        index = i
+        for j in range(i + 1, L):
+            if data[j] < data[index]:
+                index = j
+        data[i], data[index] = data[index], data[i]
+
+    # Interpolation function to find quartiles, using linear interpolation between adjacent sorted values. 
+    def interpolate(quartile):
+        pos = quartile * (L - 1)
+        low = int(pos)
+        
+        def minimum(a, b):
+            if a < b:
+                return a
+            else:
+                return b
+    
+        high = minimum(low + 1, L - 1)
+        return data[low] + (data[high] - data[low]) * (pos - low)
+
+    return interpolate(0.75) - interpolate(0.25)  # Return inter-quartile range, which is the 75th percentile minus the 25th percentile. 
 
 # Combine statistics into csv.
 #
 # Create dataframe with columns as the tickers and the rows as the statistics.
-stats = pd.DataFrame(columns=stocks, index=['Min','Max','Mean','Variance','Std Dev'])
+stats = pd.DataFrame(columns=stocks, index=['Min','Max','Range','Mean','Variance','Std Dev', 'IQR'])
 
 # Iterate through stocks and compute each statistic.
 for ticker in stocks:
     data = df[ticker].tolist()
 
-    stats[ticker] = [minimum(data), maximum(data), mean(data), variance(data), stddev(data)]
+    stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
 # Save statistics to file directory.
 print(stats)
