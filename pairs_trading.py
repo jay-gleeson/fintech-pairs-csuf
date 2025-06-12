@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sb
 import matplotlib.pyplot as plt
+import os
 
 
 # Create pandas DataFrame with various financial institutions using yfinance.
@@ -18,8 +19,21 @@ df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False
 df = df.dropna(axis=1, how='all')
 df = df.ffill()
 
+# Preview dataframe.
+print(df.head())
+
 # Export dataframe of all imported stocks.
-df.to_csv("df.csv")
+try:
+    filename = "df.csv"
+    df.to_csv(filename)
+
+    # Get the full absolute path.
+    full_path = os.path.abspath(filename)
+    print(f"\nFile successfully saved to: {full_path}\n")
+
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}\n")
+
 
 
 # Using greedy methods, find min, max, mean, variance, standard deviation, 
@@ -119,7 +133,7 @@ def iqr(data):
                 return a
             else:
                 return b
-    
+
         high = minimum(low + 1, L - 1)
         return data[low] + (data[high] - data[low]) * (pos - low)
 
@@ -136,9 +150,20 @@ for ticker in stocks:
 
     stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
-# Save statistics to file directory.
+# Preview statistics.
 print(stats)
-stats.to_csv("stats.csv")
+
+# Save statistics to file directory.
+try:
+    filename = "stats.csv"
+    stats.to_csv(filename)
+
+    # Get the full absolute path.
+    full_path = os.path.abspath(filename)
+    print(f"\nFile successfully saved to: {full_path}\n")
+
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}\n")
 
 
 # Compute pearson correlation, spearman correlation, and kendall correlation. 
@@ -170,11 +195,19 @@ def get_matrix(df, stocks, corr, filename_prefix, title):
                 matrix.loc[i, j] = corr(df[i].tolist(), df[j].tolist())
             else:
                 matrix.loc[i, j] = np.nan
-    matrix.to_csv(f"{filename_prefix}_corr.csv")
     plt.figure(figsize=(10, 8))
     sb.heatmap(matrix, annot=True, cmap='Spectral')
     plt.title(f'{title} Correlation Heatmap')
-    plt.savefig(f'{filename_prefix}_heatmap.png', dpi=300, bbox_inches='tight')
+
+    try:
+        heatmap_filename = f"{filename_prefix}_heatmap.png"
+        plt.savefig(heatmap_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"Heatmap image successfully saved to: {os.path.abspath(heatmap_filename)}\n")
+    
+    except Exception as e:
+        print(f"An error occurred while saving the file: {e}\n")
     plt.close()
 
 # Compute and save pearson correlation.
@@ -233,10 +266,10 @@ def kendall_corr(x, y):
 get_matrix(df, stocks, kendall_corr, "kendall", "Kendall")
 
 # Given all correlation methods, find the most correlated pairs of stocks.
-# 
+#
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
 stocks = ['V', 'MA', 'AXP', 'COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
-def greatest_corr(df, stocks, corr):
+def greatest_corr(df, stocks, corr, method):
     L = length(stocks)
     max_corr = 0
     pair = None
@@ -246,15 +279,14 @@ def greatest_corr(df, stocks, corr):
             if corr_value > max_corr:
                 max_corr = corr_value
                 pair = (stocks[i], stocks[j])
-    return pair, max_corr
+    print(f"Most correlated pair ({method}): {pair} with correlation {max_corr}")
+    return pair
 
 # Return the most correlated pairs of stocks for each correlation method.
-most_pearson_pair, pearson_value = greatest_corr(df, stocks, pearson_corr)
-print(f'Most correlated pair (Pearson): {most_pearson_pair} with correlation {pearson_value}')
-most_spearman_pair, spearman_value = greatest_corr(df, stocks, spearman_corr)
-print(f'Most correlated pair (Spearman): {most_spearman_pair} with correlation {spearman_value}')
-most_kendall_pair, kendall_value = greatest_corr(df, stocks, kendall_corr)
-print(f'Most correlated pair (Kendall): {most_kendall_pair} with correlation {kendall_value}')
+print("Best Correlated Pairs by Method:")
+pearson_pair = greatest_corr(df, stocks, pearson_corr, "Pearson")
+spearman_pair = greatest_corr(df, stocks, spearman_corr, "Spearman")
+kendall_pair = greatest_corr(df, stocks, kendall_corr, "Kendall")
 
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
 def plot_pair(df, pair):
@@ -294,11 +326,20 @@ def plot_pair(df, pair):
 
     # Export the plot to a file.
     plt.tight_layout()
-    plt.savefig(f'{stocka}_{stockb}_price_plot.png', dpi=300, bbox_inches='tight')
+    
+    try:
+        plot_filename = f"{stocka}_{stockb}_price_plot.png"
+        plt.savefig(f'{stocka}_{stockb}_price_plot.png', dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nPlot image successfully saved to: {os.path.abspath(plot_filename)}")
+    
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
     plt.close()
     
-# Plot the most correlated pair based on Pearson correlation.
-plot_pair(df, most_pearson_pair)
+# Plot the most correlated pair based on Spearman correlation.
+plot_pair(df, spearman_pair)
 
 # Compute engle-granger cointegration.  *** TO BE COMPLETED
 
