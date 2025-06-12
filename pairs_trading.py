@@ -7,12 +7,16 @@ import matplotlib.pyplot as plt
 
 # Create pandas DataFrame with various financial institutions using yfinance.
 #  
-# Downloading data for Visa, Mastercard, Capital One, Chase, Citigroup, Wells Fargo,  
-# American Express, Goldman Sachs, U.S. Bank, and Bank of America from June 1, 2024 to June 1, 2025.
+# Downloading data for American Express, Bank of America, Citibank, Capital One, Goldman Sachs, 
+# Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
 # 
 # Note: Only the daily adjusted close price column per each stock will be considered.
 stocks = ['AXP','BAC','C','COF','GS','JPM','MA','USB','V','WFC']
-df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False)['Adj Close']
+df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False, progress=False)['Adj Close']
+
+# Clean dataframe by dropping any columns that are completely empty and forward-filling missing data.
+df = df.dropna(axis=1, how='all')
+df = df.ffill()
 
 # Export dataframe of all imported stocks.
 df.to_csv("df.csv")
@@ -119,7 +123,7 @@ def iqr(data):
         high = minimum(low + 1, L - 1)
         return data[low] + (data[high] - data[low]) * (pos - low)
 
-    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, which is the 75th percentile minus the 25th percentile. 
+    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, the 75th percentile minus the 25th percentile. 
 
 # Combine statistics into csv.
 #
@@ -137,7 +141,8 @@ print(stats)
 stats.to_csv("stats.csv")
 
 
-# Compute pearson correlation, spearman correlation, and kendall correlation. Then, find which two stocks are most correlated with each other using each method.
+# Compute pearson correlation, spearman correlation, and kendall correlation. 
+# Then, find which two stocks are most correlated with each other using each method.
 
 # Find pearson correlation coefficient between each stock.
 #  
@@ -276,6 +281,7 @@ def plot_pair(df, pair):
     plt.xlabel('Date')
     plt.ylabel('Price')
     plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
     # Stock B plots on the bottom.
     plt.subplot(2, 1, 2)
@@ -284,6 +290,7 @@ def plot_pair(df, pair):
     plt.xlabel('Date')
     plt.ylabel('Price')
     plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
     # Export the plot to a file.
     plt.tight_layout()
