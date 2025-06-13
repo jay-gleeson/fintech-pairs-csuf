@@ -24,7 +24,7 @@ print(df.head())
 
 # Export dataframe of all imported stocks.
 try:
-    filename = "df.csv"
+    filename = 'df.csv'
     df.to_csv(filename)
 
     # Get the full absolute path.
@@ -154,7 +154,7 @@ print(stats)
 
 # Save statistics to file directory.
 try:
-    filename = "stats.csv"
+    filename = 'stats.csv'
     stats.to_csv(filename)
 
     # Get the full absolute path.
@@ -199,7 +199,7 @@ def get_matrix(df, stocks, corr, filename_prefix, title):
     plt.title(f'{title} Correlation Heatmap')
 
     try:
-        heatmap_filename = f"{filename_prefix}_heatmap.png"
+        heatmap_filename = f'{filename_prefix}_heatmap.png'
         plt.savefig(heatmap_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
@@ -210,7 +210,7 @@ def get_matrix(df, stocks, corr, filename_prefix, title):
     plt.close()
 
 # Compute and save pearson correlation.
-get_matrix(df, stocks, pearson_corr, "pearson", "Pearson")
+get_matrix(df, stocks, pearson_corr, 'pearson', 'Pearson')
 
 # Find spearman correlation coefficient between each stock.
 #  
@@ -242,7 +242,7 @@ def spearman_corr(x, y):
     return pearson_corr(rankx, ranky)
 
 # Compute and save spearman correlation.
-get_matrix(df, stocks, spearman_corr, "spearman", "Spearman")
+get_matrix(df, stocks, spearman_corr, 'spearman', 'Spearman')
 
 # Find kendall correlation coefficient between each stock.
 #  
@@ -262,12 +262,12 @@ def kendall_corr(x, y):
     return (concordant - discordant) / ((L * (L - 1)) / 2)
 
 # Compute and save kendall correlation.
-get_matrix(df, stocks, kendall_corr, "kendall", "Kendall")
+get_matrix(df, stocks, kendall_corr, 'kendall', 'Kendall')
 
 # Given all correlation methods, find the most correlated pairs of stocks.
 #
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
-stocks = ['V', 'MA', 'AXP', 'COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
+stocks = ['V','MA','AXP','COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
 def greatest_corr(data, stocks, corr, method):
     L = length(stocks)
     max_corr = 0
@@ -283,9 +283,9 @@ def greatest_corr(data, stocks, corr, method):
 
 # Return the most correlated pairs of stocks for each correlation method.
 print("Best correlated pairs by method:")
-pearson_pair = greatest_corr(df, stocks, pearson_corr, "Pearson")
-spearman_pair = greatest_corr(df, stocks, spearman_corr, "Spearman")
-kendall_pair = greatest_corr(df, stocks, kendall_corr, "Kendall")
+pearson_pair = greatest_corr(df, stocks, pearson_corr, 'Pearson')
+spearman_pair = greatest_corr(df, stocks, spearman_corr, 'Spearman')
+kendall_pair = greatest_corr(df, stocks, kendall_corr, 'Kendall')
 
 # Set our new correlated pair to the spearman pair and perform cointegration on it.
 pair = spearman_pair
@@ -330,7 +330,7 @@ def plot_pair(data, pair):
     plt.tight_layout()
 
     try:
-        plot_filename = f"{stocka}_{stockb}_price_plot.png"
+        plot_filename = f'{stocka}_{stockb}_price_plot.png'
         plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
