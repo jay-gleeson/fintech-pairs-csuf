@@ -35,7 +35,6 @@ except Exception as e:
     print(f"\nAn error occurred while saving the file: {e}\n")
 
 
-
 # Using greedy methods, find min, max, mean, variance, standard deviation, 
 # and interquartile range of stocks and download to csv for future use. 
 
@@ -269,13 +268,13 @@ get_matrix(df, stocks, kendall_corr, "kendall", "Kendall")
 #
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
 stocks = ['V', 'MA', 'AXP', 'COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
-def greatest_corr(df, stocks, corr, method):
+def greatest_corr(data, stocks, corr, method):
     L = length(stocks)
     max_corr = 0
     pair = None
     for i in range(L):
         for j in range(i + 1, L):
-            corr_value = corr(df[stocks[i]].tolist(), df[stocks[j]].tolist())
+            corr_value = corr(data[stocks[i]].tolist(), data[stocks[j]].tolist())
             if corr_value > max_corr:
                 max_corr = corr_value
                 pair = (stocks[i], stocks[j])
@@ -283,13 +282,16 @@ def greatest_corr(df, stocks, corr, method):
     return pair
 
 # Return the most correlated pairs of stocks for each correlation method.
-print("Best Correlated Pairs by Method:")
+print("Best correlated pairs by method:")
 pearson_pair = greatest_corr(df, stocks, pearson_corr, "Pearson")
 spearman_pair = greatest_corr(df, stocks, spearman_corr, "Spearman")
 kendall_pair = greatest_corr(df, stocks, kendall_corr, "Kendall")
 
+# Set our new correlated pair to the spearman pair and perform cointegration on it.
+pair = spearman_pair
+
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
-def plot_pair(df, pair):
+def plot_pair(data, pair):
     stocka, stockb = pair
     
     # Map tickers to company names.
@@ -308,7 +310,7 @@ def plot_pair(df, pair):
     # Stock A plots on the top.
     plt.figure(figsize=(10, 6))
     plt.subplot(2, 1, 1)
-    plt.plot(df[stocka], label=namea, color='blue')
+    plt.plot(data[stocka], label=namea, color='blue')
     plt.title(f'{namea} ({stocka}) Daily Adjusted Close Price')
     plt.xlabel('Date')
     plt.ylabel('Price')
@@ -317,7 +319,7 @@ def plot_pair(df, pair):
 
     # Stock B plots on the bottom.
     plt.subplot(2, 1, 2)
-    plt.plot(df[stockb], label=nameb, color='red')
+    plt.plot(data[stockb], label=nameb, color='red')
     plt.title(f'{nameb} ({stockb}) Daily Adjusted Close Price')
     plt.xlabel('Date')
     plt.ylabel('Price')
@@ -326,10 +328,10 @@ def plot_pair(df, pair):
 
     # Export the plot to a file.
     plt.tight_layout()
-    
+
     try:
         plot_filename = f"{stocka}_{stockb}_price_plot.png"
-        plt.savefig(f'{stocka}_{stockb}_price_plot.png', dpi=300, bbox_inches='tight')
+        plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
         print(f"\nPlot image successfully saved to: {os.path.abspath(plot_filename)}")
@@ -339,8 +341,20 @@ def plot_pair(df, pair):
     plt.close()
     
 # Plot the most correlated pair based on Spearman correlation.
-plot_pair(df, spearman_pair)
+plot_pair(df, pair)
 
 # Compute engle-granger cointegration.  *** TO BE COMPLETED
+# 
+# Normalize stock data on logarithmic scale.
+# 
+# Perform OLS regression.
+# 
+# Test residuals for stationarity.
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
+#
+# Concentrate signal with z-scores.
+# 
+# Backtest strategy.
+# 
+# Optimize threshholds.
