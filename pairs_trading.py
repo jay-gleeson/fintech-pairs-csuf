@@ -138,17 +138,7 @@ for ticker in stocks:
 # Save statistics to file directory.
 print(stats)
 stats.to_csv("stats.csv")
-
-
-<<<<<<< Updated upstream
-# Compute pearson correlation, spearman correlation, and kendall correlation.  *** TO BE COMPLETED
-
-=======
-# Compute pearson correlation, spearman correlation, and kendall correlation. 
-# Then, find which two stocks are most correlated with each other using each method.
-
-# Find pearson correlation coefficient between each stock.
-#  
+  
 # Function to find pearson correlation coefficient between each stock.
 def pearson_corr(x, y):
     meanx = mean(x)
@@ -317,6 +307,7 @@ def olss(df, most_pearson_pair):
     return df0['residual'], beta1, beta0
 olss(df, most_pearson_pair)
 df0["residual_delay"] = df0['residual'].shift(1) 
+df0["residual_difference"] = df0["residual"] - df0[residual_delay]
 
 
  # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
@@ -332,5 +323,6 @@ plt.legend()
 plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 plt.savefig(f'Residual_graph', dpi=300, bbox_inches='tight')
 plt.close()
-jon = 12
+
+
 
