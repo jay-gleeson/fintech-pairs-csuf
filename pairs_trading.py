@@ -186,12 +186,12 @@ def pearson_corr(x, y):
     return covariancexy / ((variancex * variancey) ** 0.5)
 
 # Function to compute and export correlation matrix and heatmap.
-def get_matrix(df, stocks, corr, filename_prefix, title):
+def get_matrix(data, stocks, corr, filename_prefix, title):
     matrix = pd.DataFrame(index=stocks, columns=stocks, dtype=float)
     for i in stocks:
         for j in stocks:
             if stocks.index(j) >= stocks.index(i):
-                matrix.loc[i, j] = corr(df[i].tolist(), df[j].tolist())
+                matrix.loc[i, j] = corr(data[i], data[j])
             else:
                 matrix.loc[i, j] = np.nan
     plt.figure(figsize=(10, 8))
@@ -290,21 +290,24 @@ kendall_pair = greatest_corr(df, stocks, kendall_corr, 'Kendall')
 # Set our new correlated pair to the spearman pair and perform cointegration on it.
 pair = spearman_pair
 
+# Function to get the names of the stocks in the pair.
+def get_stock_names(pair):
+    stock_names = {
+        'V': 'Visa',
+        'MA': 'Mastercard',
+        'AXP': 'American Express',
+        'COF': 'Capital One'
+    }
+    namea = stock_names.get(pair[0], pair[0])
+    nameb = stock_names.get(pair[1], pair[1])
+    return namea, nameb
+
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
 def plot_pair(data, pair):
     stocka, stockb = pair
     
-    # Map tickers to company names.
-    stock_names = {
-        'AXP': 'American Express',
-        'COF': 'Capital One',
-        'MA': 'Mastercard',
-        'V': 'Visa',
-    }
-    
-    namea = stock_names[stocka] if stocka in stock_names else stocka
-    nameb = stock_names[stockb] if stockb in stock_names else stockb
-    
+    namea, nameb = get_stock_names(pair)
+
     # Plot the daily adjusted close price of each stock in the pair.
     # 
     # Stock A plots on the top.
@@ -343,13 +346,78 @@ def plot_pair(data, pair):
 # Plot the most correlated pair based on Spearman correlation.
 plot_pair(df, pair)
 
+
 # Compute engle-granger cointegration.  *** TO BE COMPLETED
 # 
-# Normalize stock data on logarithmic scale.
-# 
-# Perform OLS regression.
-# 
+# Function to normalize stock data on logarithmic scale.
+def normalize(data, pair):
+    stocka, stockb = pair
+    a = data[stocka].tolist()
+    b = data[stockb].tolist()
+    meana = mean(a)
+    meanb = mean(b)
+    norma = [np.log(x / meana) for x in a]
+    normb = [np.log(x / meanb) for x in b]
+    return norma, normb
+
+# Normalize the pair of stocks.
+norma, normb = normalize(df, pair)
+
+# Function to perform OLS regression on the normalized pair of stocks.
+def ols(a, b):
+    L = length(a)
+    meana = mean(a)
+    meanb = mean(b)
+    num = 0
+    den = 0
+
+    # Formula for OLS regression slope and intercept where slope is the ratio of covariance to variance and intercept is the mean of b minus the slope times the mean of a.
+    for i in range(L):
+        num += (a[i] - meana) * (b[i] - meanb)
+        den += (a[i] - meana) ** 2
+    slope = num / den
+    intercept = meanb - slope * meana
+    residuals = []
+    for n in range(L):
+        residuals.append(b[n] - (slope * a[n] + intercept))
+    residuals_lag = [None] + residuals[:-1]
+    residuals_diff = [None] + [residuals[i] - residuals[i-1] for i in range(1, L)]
+    return residuals, residuals_lag, residuals_diff
+
+# Perform OLS regression on the normalized pair of stocks.
+residuals, residuals_lag, residuals_diff = ols(norma, normb)
+
+# Function to plot residuals.
+def plot_residuals(residuals, pair):
+
+    # Plot residuals to visualize the relationship between the two stocks.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+    plt.figure(figsize=(10, 6))
+    plt.plot(residuals, label='Residuals', color='purple')
+    plt.title(f'Residuals of {namea} and {nameb}')
+    plt.xlabel('Date')
+    plt.ylabel('Residuals')
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    try:
+        residual_plot_filename = f'{stocka}_{stockb}_residuals_plot.png'
+        plt.savefig(residual_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nResidual plot image successfully saved to: {os.path.abspath(residual_plot_filename)}")
+    
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+
+    plt.close()
+
+# Plot the residuals of the normalized pair of stocks.
+plot_residuals(residuals, pair)
+
 # Test residuals for stationarity.
+
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
 #
