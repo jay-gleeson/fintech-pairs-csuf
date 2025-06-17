@@ -3,31 +3,34 @@ import pandas as pd
 import numpy as np
 import seaborn as sb
 import matplotlib.pyplot as plt
-
-
+import os
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 # Create pandas DataFrame with various financial institutions using yfinance.
-#  
-# Downloading data for Visa, Mastercard, Capital One, Chase, Citigroup, Wells Fargo,  
-# American Express, Goldman Sachs, U.S. Bank, and Bank of America from June 1, 2024 to June 1, 2025.
-# 
+# Downloading data for American Express, Bank of America, Citibank, Capital One, Goldman Sachs, 
+# Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
 # Note: Only the daily adjusted close price column per each stock will be considered.
 stocks = ['AXP','BAC','C','COF','GS','JPM','MA','USB','V','WFC']
-df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False)['Adj Close']
+df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False, progress=False)['Adj Close']
+
+# Clean dataframe by dropping any columns that are completely empty and forward-filling missing data.
+df = df.dropna(axis=1, how='all')
+df = df.ffill()
+
+# Preview dataframe.
+print(df.head())
 
 # Export dataframe of all imported stocks.
-df.to_csv("df.csv")
+try:
+    filename = 'df.csv'
+    df.to_csv(filename)
 
+    # Get the full absolute path.
+    full_path = os.path.abspath(filename)
+    print(f"\nFile successfully saved to: {full_path}\n")
 
-# Form a traditional correlation heatmap given current stocks as a proof of concept.
-# 
-# The purpose of this is to find what stocks are the most correlated 
-# in order to pit the two most correlated ones against each other for pairs trading.
-plt.figure(figsize=(10, 8))
-sb.heatmap(df.corr(), annot=True, cmap='Spectral')
-plt.title('Correlation Heatmap')
-
-# Save correlation heatmap to file directory.
-plt.savefig('heatmap.png', dpi=300, bbox_inches='tight')
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}\n")
 
 
 # Using greedy methods, find min, max, mean, variance, standard deviation, 
@@ -41,6 +44,21 @@ def length(data):
     for n in data:
         count += 1
     return count
+
+# Sort each column in ascending order.
+#
+# Function to, upon call, sort a list of data in ascending order, using selection sort for simplicity.
+def sort(data):
+    data = data.copy()
+    L = length(data)
+    for i in range(L):
+        index = i
+        for j in range(i + 1, L):
+            if data[j] < data[index]:
+                index = j
+        data[i], data[index] = data[index], data[i]
+    return data
+
 
 # Find minimum and maximum of each stock.
 #
@@ -85,28 +103,22 @@ def variance(data):
     # Numerator of variance formula, find sum of squared deviations.
     for n in data:
         sum_dev += (n - m) ** 2
-    return sum_dev / (length(data) - 1) #  Sample variance.
+    return sum_dev / (length(data) - 1)  # Note: Sample variance.
 
 # Find standard deviation of each stock.
 #  
 # Function to find standard deviation of each stock.
 def stddev(data):
-    return variance(data) ** 0.5  # Square root of sample variance.
+
+    # Standard deviation is the square root of the variance.
+    return variance(data) ** 0.5
 
 # Find interquartile range of each stock.
 # 
 # Function to find interquartile range of each stock.
 def iqr(data):
-    data = data.copy()
+    data = sort(data)
     L = length(data)
-
-    # Sort prices in ascending order, using selection sort for simplicity.
-    for i in range(L):
-        index = i
-        for j in range(i + 1, L):
-            if data[j] < data[index]:
-                index = j
-        data[i], data[index] = data[index], data[i]
 
     # Interpolation function to find quartiles, using linear interpolation between adjacent sorted values. 
     def interpolate(quartile):
@@ -118,11 +130,11 @@ def iqr(data):
                 return a
             else:
                 return b
-    
+
         high = minimum(low + 1, L - 1)
         return data[low] + (data[high] - data[low]) * (pos - low)
 
-    return interpolate(0.75) - interpolate(0.25)  # Return inter-quartile range, which is the 75th percentile minus the 25th percentile. 
+    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, the 75th percentile minus the 25th percentile. 
 
 # Combine statistics into csv.
 #
@@ -135,10 +147,27 @@ for ticker in stocks:
 
     stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
-# Save statistics to file directory.
+# Preview statistics.
 print(stats)
-stats.to_csv("stats.csv")
-  
+
+# Save statistics to file directory.
+try:
+    filename = 'stats.csv'
+    stats.to_csv(filename)
+
+    # Get the full absolute path.
+    full_path = os.path.abspath(filename)
+    print(f"\nFile successfully saved to: {full_path}\n")
+
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}\n")
+
+
+# Compute pearson correlation, spearman correlation, and kendall correlation. 
+# Then, find which two stocks are most correlated with each other using each method.
+
+# Find pearson correlation coefficient between each stock.
+#  
 # Function to find pearson correlation coefficient between each stock.
 def pearson_corr(x, y):
     meanx = mean(x)
@@ -155,23 +184,31 @@ def pearson_corr(x, y):
     return covariancexy / ((variancex * variancey) ** 0.5)
 
 # Function to compute and export correlation matrix and heatmap.
-def get_matrix(df, stocks, corr, filename_prefix, title):
+def get_matrix(data, stocks, corr, filename_prefix, title):
     matrix = pd.DataFrame(index=stocks, columns=stocks, dtype=float)
     for i in stocks:
         for j in stocks:
             if stocks.index(j) >= stocks.index(i):
-                matrix.loc[i, j] = corr(df[i].tolist(), df[j].tolist())
+                matrix.loc[i, j] = corr(data[i], data[j])
             else:
                 matrix.loc[i, j] = np.nan
-    matrix.to_csv(f"{filename_prefix}_corr.csv")
     plt.figure(figsize=(10, 8))
     sb.heatmap(matrix, annot=True, cmap='Spectral')
     plt.title(f'{title} Correlation Heatmap')
-    plt.savefig(f'{filename_prefix}_heatmap.png', dpi=300, bbox_inches='tight')
+
+    try:
+        heatmap_filename = f'{filename_prefix}_heatmap.png'
+        plt.savefig(heatmap_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"Heatmap image successfully saved to: {os.path.abspath(heatmap_filename)}\n")
+    
+    except Exception as e:
+        print(f"An error occurred while saving the file: {e}\n")
     plt.close()
 
 # Compute and save pearson correlation.
-get_matrix(df, stocks, pearson_corr, "pearson", "Pearson")
+get_matrix(df, stocks, pearson_corr, 'pearson', 'Pearson')
 
 # Find spearman correlation coefficient between each stock.
 #  
@@ -203,7 +240,7 @@ def spearman_corr(x, y):
     return pearson_corr(rankx, ranky)
 
 # Compute and save spearman correlation.
-get_matrix(df, stocks, spearman_corr, "spearman", "Spearman")
+get_matrix(df, stocks, spearman_corr, 'spearman', 'Spearman')
 
 # Find kendall correlation coefficient between each stock.
 #  
@@ -223,53 +260,58 @@ def kendall_corr(x, y):
     return (concordant - discordant) / ((L * (L - 1)) / 2)
 
 # Compute and save kendall correlation.
-get_matrix(df, stocks, kendall_corr, "kendall", "Kendall")
+get_matrix(df, stocks, kendall_corr, 'kendall', 'Kendall')
 
 # Given all correlation methods, find the most correlated pairs of stocks.
-# 
+#
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
-stocks = ['V', 'MA', 'AXP', 'COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
-def greatest_corr(df, stocks, corr):
+stocks = ['V','MA','AXP','COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
+def greatest_corr(data, stocks, corr, method):
     L = length(stocks)
     max_corr = 0
     pair = None
     for i in range(L):
         for j in range(i + 1, L):
-            corr_value = corr(df[stocks[i]].tolist(), df[stocks[j]].tolist())
+            corr_value = corr(data[stocks[i]].tolist(), data[stocks[j]].tolist())
             if corr_value > max_corr:
                 max_corr = corr_value
                 pair = (stocks[i], stocks[j])
-    return pair, max_corr
+    print(f"Most correlated pair ({method}): {pair} with correlation {max_corr}")
+    return pair
 
 # Return the most correlated pairs of stocks for each correlation method.
-most_pearson_pair, pearson_value = greatest_corr(df, stocks, pearson_corr)
-print(f'Most correlated pair (Pearson): {most_pearson_pair} with correlation {pearson_value}')
-most_spearman_pair, spearman_value = greatest_corr(df, stocks, spearman_corr)
-print(f'Most correlated pair (Spearman): {most_spearman_pair} with correlation {spearman_value}')
-most_kendall_pair, kendall_value = greatest_corr(df, stocks, kendall_corr)
-print(f'Most correlated pair (Kendall): {most_kendall_pair} with correlation {kendall_value}')
+print("Best correlated pairs by method:")
+pearson_pair = greatest_corr(df, stocks, pearson_corr, 'Pearson')
+spearman_pair = greatest_corr(df, stocks, spearman_corr, 'Spearman')
+kendall_pair = greatest_corr(df, stocks, kendall_corr, 'Kendall')
+
+# Set our new correlated pair to the spearman pair and perform cointegration on it.
+pair = spearman_pair
+
+# Function to get the names of the stocks in the pair.
+def get_stock_names(pair):
+    stock_names = {
+        'V': 'Visa',
+        'MA': 'Mastercard',
+        'AXP': 'American Express',
+        'COF': 'Capital One'
+    }
+    namea = stock_names.get(pair[0], pair[0])
+    nameb = stock_names.get(pair[1], pair[1])
+    return namea, nameb
 
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
-def plot_pair(df, pair):
+def plot_pair(data, pair):
     stocka, stockb = pair
     
-    # Map tickers to company names.
-    stock_names = {
-        'AXP': 'American Express',
-        'COF': 'Capital One',
-        'MA': 'Mastercard',
-        'V': 'Visa',
-    }
-    
-    namea = stock_names[stocka] if stocka in stock_names else stocka
-    nameb = stock_names[stockb] if stockb in stock_names else stockb
-    
+    namea, nameb = get_stock_names(pair)
+
     # Plot the daily adjusted close price of each stock in the pair.
     # 
     # Stock A plots on the top.
     plt.figure(figsize=(10, 6))
     plt.subplot(2, 1, 1)
-    plt.plot(df[stocka], label=namea, color='blue')
+    plt.plot(data[stocka], label=namea, color='blue')
     plt.title(f'{namea} ({stocka}) Daily Adjusted Close Price')
     plt.xlabel('Date')
     plt.ylabel('Price')
@@ -278,7 +320,7 @@ def plot_pair(df, pair):
 
     # Stock B plots on the bottom.
     plt.subplot(2, 1, 2)
-    plt.plot(df[stockb], label=nameb, color='red')
+    plt.plot(data[stockb], label=nameb, color='red')
     plt.title(f'{nameb} ({stockb}) Daily Adjusted Close Price')
     plt.xlabel('Date')
     plt.ylabel('Price')
@@ -287,42 +329,126 @@ def plot_pair(df, pair):
 
     # Export the plot to a file.
     plt.tight_layout()
-    plt.savefig(f'{stocka}_{stockb}_price_plot.png', dpi=300, bbox_inches='tight')
+
+    try:
+        plot_filename = f'{stocka}_{stockb}_price_plot.png'
+        plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nPlot image successfully saved to: {os.path.abspath(plot_filename)}")
+    
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+    
+# Plot the most correlated pair based on Spearman correlation.
+plot_pair(df, pair)
+
+
+# Compute engle-granger cointegration.  *** TO BE COMPLETED
+# 
+# Function to normalize stock data on logarithmic scale.
+def normalize(data, pair):
+    stocka, stockb = pair
+    a = data[stocka].tolist()
+    b = data[stockb].tolist()
+    meana = mean(a)
+    meanb = mean(b)
+    norma = [np.log(x / meana) for x in a]
+    normb = [np.log(x / meanb) for x in b]
+    return norma, normb
+
+# Normalize the pair of stocks.
+norma, normb = normalize(df, pair)
+
+# Function to perform OLS regression on the normalized pair of stocks.
+def ols(a, b):
+    L = length(a)
+    meana = mean(a)
+    meanb = mean(b)
+    num = 0
+    den = 0
+
+    # Formula for OLS regression slope and intercept where slope is the ratio of covariance to variance and intercept is the mean of b minus the slope times the mean of a.
+    for i in range(L):
+        num += (a[i] - meana) * (b[i] - meanb)
+        den += (a[i] - meana) ** 2
+    slope = num / den
+    intercept = meanb - slope * meana
+    residuals = []
+    for n in range(L):
+        residuals.append(b[n] - (slope * a[n] + intercept))
+    residuals_lag = [None] + residuals[:-1]
+    residuals_diff = [None] + [residuals[i] - residuals[i-1] for i in range(1, L)]
+    return residuals, residuals_lag, residuals_diff
+
+# Perform OLS regression on the normalized pair of stocks.
+residuals, residuals_lag, residuals_diff = ols(norma, normb)
+
+# Function to plot residuals.
+def plot_residuals(residuals, pair):
+
+    # Plot residuals to visualize the relationship between the two stocks.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+    plt.figure(figsize=(10, 6))
+    plt.plot(residuals, label='Residuals', color='purple')
+    plt.title(f'Residuals of {namea} and {nameb}')
+    plt.xlabel('Date')
+    plt.ylabel('Residuals')
+    
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    try:
+        residual_plot_filename = f'{stocka}_{stockb}_residuals_plot.png'
+        plt.savefig(residual_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nResidual plot image successfully saved to: {os.path.abspath(residual_plot_filename)}")
+    
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+
     plt.close()
 
-# Plot the most correlated pair based on Pearson correlation.
-plot_pair(df, most_pearson_pair)
->>>>>>> Stashed changes
-# Compute engle-granger cointegration.  *** TO BE COMPLETED
-# First is finding the risidual using OLS
-df0 = pd.DataFrame()
-def olss(df, most_pearson_pair):
-    a = df[most_pearson_pair[0]]
-    b = df[most_pearson_pair[1]]
-    amean = mean(a)
-    bmean = mean(b)
-    beta1 = ((a - amean) * (b - bmean)).sum() / ((a - amean) ** 2).sum()
-    beta0 = bmean - beta1 * amean
-    df0['residual'] = b - (beta0 + beta1 * a)
-    return df0['residual'], beta1, beta0
-olss(df, most_pearson_pair)
-df0["residual_delay"] = df0['residual'].shift(1) 
-df0["residual_difference"] = df0["residual"] - df0[residual_delay]
+# Plot the residuals of the normalized pair of stocks.
+plot_residuals(residuals, pair)
 
+# Test residuals for stationarity.
+# creating a data frame with the residual values
+df1 = pd.DataFrame({
+    'residual': residuals,
+    'residual_lag': residuals_lag,
+    'residual_diff': residuals_diff
+})
+df_clean = df1.dropna().reset_index(drop=True)
+df_clean['intercept'] = 1
+df1 = df_clean["intercept"]
+df_clean.to_csv("Residual_Values.csv")
+#Conducting the dickey fuller test in order to test for stationarity
+#
+print(df_clean) # These will be a major factor when conducting these tests.
+x_lagged = df_clean['residual_lag']
+y_difference = df_clean["residual_diff"]
+# Some matrix multiplication are then conducted 
+XtX_matrix = x_lagged.T * x_lagged
+XtY_matrix = x_lagged.T * y_difference
+lagged_matrix = XtX_matrix.to_numpy()
+diff_matrix = XtY_matrix.to_numpy()
+gamma_hat = (lagged_matrix ** -1) * diff_matrix # here gamma hat is the estimated slope of the residual.
 
- # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
-df0.to_csv('output.csv', columns=["residual", "residual_delay"],index=False)
+print(gamma_hat)
 
-plt.figure(figsize=(10, 6))
-plt.plot(df0["residual"], label="residual graph", color='blue')
-plt.axhline(0, color='r') # vertical
-plt.title('residual graph')
-plt.xlabel('Date')
-plt.ylabel('residual values')
-plt.legend()
-plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-plt.savefig(f'Residual_graph', dpi=300, bbox_inches='tight')
-plt.close()
+# TODO: find out how to apply matricies and how to multiply
 
+#In order to test if the data set has stationarity we will use the dickey fuller test
+#def dickey_fuller(residual, max_lag=1):
 
-
+# Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
+#
+# Concentrate signal with z-scores.
+# 
+# Backtest strategy.
+# 
+# Optimize threshholds.
