@@ -172,6 +172,7 @@ except Exception as e:
 #  
 # Function to find pearson correlation coefficient between each stock.
 def pearson_corr(x, y):
+    L = length(x)
     meanx = mean(x)
     meany = mean(y)
     covariancexy = 0
@@ -179,7 +180,7 @@ def pearson_corr(x, y):
     variancey = 0
 
     # Formula for pearson correlation coefficient is covariance divided by the product of the standard deviations.
-    for n in range(length(x)):
+    for n in range(L):
         covariancexy += (x[n] - meanx) * (y[n] - meany)
         variancex += (x[n] - meanx) ** 2
         variancey += (y[n] - meany) ** 2
@@ -220,7 +221,7 @@ def spearman_corr(x, y):
     # Function to rank data, using average ranks for ties.
     def rank(data):
         L = length(data)
-        data = [[data[i], i] for i in range(L)]
+        data = [[data[n], n] for n in range(L)]
         data = sort(data)
 
         rank = [0] * L
@@ -261,8 +262,17 @@ def kendall_corr(x, y):
                 discordant += 1
     return (concordant - discordant) / ((L * (L - 1)) / 2)
 
+# Downsample the dataframe to speed up computation, taking 20% of the data.
+#
+# Function to downsample the dataframe by a given step.
+def downsample_df(df, step):
+    return df.iloc[::step].copy()
+
+# Downsample the dataframe to speed up computation.
+df_kendall = downsample_df(df, step=5)
+
 # Compute and save kendall correlation.
-get_matrix(df, stocks, kendall_corr, 'kendall', 'Kendall')
+get_matrix(df_kendall, stocks, kendall_corr, 'kendall', 'Kendall')
 
 # Given all correlation methods, find the most correlated pairs of stocks.
 #
@@ -354,10 +364,8 @@ def normalize(data, pair):
     stocka, stockb = pair
     a = data[stocka].tolist()
     b = data[stockb].tolist()
-    meana = mean(a)
-    meanb = mean(b)
-    norma = [np.log(x / meana) for x in a]
-    normb = [np.log(x / meanb) for x in b]
+    norma = [np.log(n) for n in a]
+    normb = [np.log(n) for n in b]
     return norma, normb
 
 # Normalize the pair of stocks.
@@ -388,17 +396,19 @@ def ols(a, b):
 residuals, residuals_lag, residuals_diff = ols(norma, normb)
 
 # Function to plot residuals.
-def plot_residuals(residuals, pair):
+def plot_residuals(residuals, pair, data):
 
     # Plot residuals to visualize the relationship between the two stocks.
     stocka, stockb = pair
     namea, nameb = get_stock_names(pair)
     plt.figure(figsize=(10, 6))
-    plt.plot(residuals, label='Residuals', color='purple')
+
+    # Enter residuals into dataframe, to display dates on plot.
+    df_residuals = pd.Series(residuals, index=data.index)
+    plt.plot(df_residuals, label='Residuals', color='purple')
     plt.title(f'Residuals of {namea} and {nameb}')
     plt.xlabel('Date')
     plt.ylabel('Residuals')
-    plt.legend()
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
     try:
@@ -414,7 +424,7 @@ def plot_residuals(residuals, pair):
     plt.close()
 
 # Plot the residuals of the normalized pair of stocks.
-plot_residuals(residuals, pair)
+plot_residuals(residuals, pair, df)
 
 # Test residuals for stationarity.
 
