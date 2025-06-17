@@ -4,13 +4,11 @@ import numpy as np
 import seaborn as sb
 import matplotlib.pyplot as plt
 import os
-
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 # Create pandas DataFrame with various financial institutions using yfinance.
-#  
 # Downloading data for American Express, Bank of America, Citibank, Capital One, Goldman Sachs, 
 # Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
-# 
 # Note: Only the daily adjusted close price column per each stock will be considered.
 stocks = ['AXP','BAC','C','COF','GS','JPM','MA','USB','V','WFC']
 df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False, progress=False)['Adj Close']
@@ -398,6 +396,7 @@ def plot_residuals(residuals, pair):
     plt.title(f'Residuals of {namea} and {nameb}')
     plt.xlabel('Date')
     plt.ylabel('Residuals')
+    
     plt.legend()
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
@@ -417,7 +416,34 @@ def plot_residuals(residuals, pair):
 plot_residuals(residuals, pair)
 
 # Test residuals for stationarity.
+# creating a data frame with the residual values
+df1 = pd.DataFrame({
+    'residual': residuals,
+    'residual_lag': residuals_lag,
+    'residual_diff': residuals_diff
+})
+df_clean = df1.dropna().reset_index(drop=True)
+df_clean['intercept'] = 1
+df1 = df_clean["intercept"]
+df_clean.to_csv("Residual_Values.csv")
+#Conducting the dickey fuller test in order to test for stationarity
+#
+print(df_clean) # These will be a major factor when conducting these tests.
+x_lagged = df_clean['residual_lag']
+y_difference = df_clean["residual_diff"]
+# Some matrix multiplication are then conducted 
+XtX_matrix = x_lagged.T * x_lagged
+XtY_matrix = x_lagged.T * y_difference
+lagged_matrix = XtX_matrix.to_numpy()
+diff_matrix = XtY_matrix.to_numpy()
+gamma_hat = (lagged_matrix ** -1) * diff_matrix # here gamma hat is the estimated slope of the residual.
 
+print(gamma_hat)
+
+# TODO: find out how to apply matricies and how to multiply
+
+#In order to test if the data set has stationarity we will use the dickey fuller test
+#def dickey_fuller(residual, max_lag=1):
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
 #
