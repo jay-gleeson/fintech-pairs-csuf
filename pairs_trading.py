@@ -427,7 +427,35 @@ def plot_residuals(residuals, pair, data):
 plot_residuals(residuals, pair, df)
 
 # Test residuals for stationarity.
+df1 = pd.DataFrame({
+    'residual': residuals,
+    'residual_lag': residuals_lag,
+    'residual_diff': residuals_diff
+})
+df_clean = df1.dropna().reset_index(drop=True)
+df_clean['intercept'] = 1
+df1 = df_clean["intercept"]
+df_clean.to_csv("Residual_Values.csv")
+matrix = df1.to_numpy
+#Conducting the dickey fuller test in order to test for stationarity
+#
+print(df_clean) # These will be a major factor when conducting these tests.
+x_lagged = df_clean['residual_lag']
+y_difference = df_clean["residual_diff"]
+X = x_lagged.to_numpy().reshape(-1, 1)
+Y = y_difference.to_numpy().reshape(-1, 1)
+# Some matrix multiplication are then conducted 
+XtX = X.T @ X     # shape: (1, 1)
+XtY = X.T @ Y     # shape: (1, 1)
+XtX_inversed = np.linalg.inv(XtX)
+gamma_hat = XtX_inversed @ XtY
 
+print(gamma_hat)
+
+# TODO: find out how to apply matricies and how to multiply
+
+#In order to test if the data set has stationarity we will use the dickey fuller test
+#def dickey_fuller(residual, max_lag=1):
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
 #
