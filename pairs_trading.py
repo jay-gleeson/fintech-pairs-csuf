@@ -49,16 +49,16 @@ def length(data):
 
 # Sort each column in ascending order.
 #
-# Function to, upon call, sort a list of data in ascending order, using selection sort for simplicity.
+# Function to, upon call, sort a series of data in ascending order, using selection sort for simplicity.
 def sort(data):
     data = data.copy()
     L = length(data)
     for i in range(L):
         index = i
         for j in range(i + 1, L):
-            if data[j] < data[index]:
+            if data.iloc[j] < data.iloc[index]:
                 index = j
-        data[i], data[index] = data[index], data[i]
+        data.iloc[i], data.iloc[index] = data.iloc[index], data.iloc[i]
     return data
 
 
@@ -66,7 +66,7 @@ def sort(data):
 #
 # Function to find minimum daily adjusted close price.
 def minimum(data):
-    min = data[0]
+    min = data.iloc[0]
     for n in data:
         if n < min:
             min = n
@@ -74,7 +74,7 @@ def minimum(data):
 
 # Function to find maximum daily adjusted close price.
 def maximum(data):
-    max = data[0]
+    max = data.iloc[0]
     for n in data:
         if n > max:
             max = n
@@ -134,9 +134,9 @@ def iqr(data):
                 return b
 
         high = minimum(low + 1, L - 1)
-        return data[low] + (data[high] - data[low]) * (pos - low)
+        return data.iloc[low] + (data.iloc[high] - data.iloc[low]) * (pos - low)
 
-    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, the 75th percentile minus the 25th percentile. 
+    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, the 75th percentile minus the 25th percentile.
 
 # Combine statistics into csv.
 #
@@ -145,7 +145,7 @@ stats = pd.DataFrame(columns=stocks, index=['Min','Max','Range','Mean','Variance
 
 # Iterate through stocks and compute each statistic.
 for ticker in stocks:
-    data = df[ticker].tolist()
+    data = df[ticker]
 
     stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
@@ -167,24 +167,6 @@ except Exception as e:
 
 # Compute pearson correlation, spearman correlation, and kendall correlation. 
 # Then, find which two stocks are most correlated with each other using each method.
-
-# Find pearson correlation coefficient between each stock.
-#  
-# Function to find pearson correlation coefficient between each stock.
-def pearson_corr(x, y):
-    L = length(x)
-    meanx = mean(x)
-    meany = mean(y)
-    covariancexy = 0
-    variancex = 0
-    variancey = 0
-
-    # Formula for pearson correlation coefficient is covariance divided by the product of the standard deviations.
-    for n in range(L):
-        covariancexy += (x[n] - meanx) * (y[n] - meany)
-        variancex += (x[n] - meanx) ** 2
-        variancey += (y[n] - meany) ** 2
-    return covariancexy / ((variancex * variancey) ** 0.5)
 
 # Function to compute and export correlation matrix and heatmap.
 def get_matrix(data, stocks, corr, filename_prefix, title):
@@ -210,6 +192,24 @@ def get_matrix(data, stocks, corr, filename_prefix, title):
         print(f"An error occurred while saving the file: {e}\n")
     plt.close()
 
+# Find pearson correlation coefficient between each stock.
+#  
+# Function to find pearson correlation coefficient between each stock.
+def pearson_corr(x, y):
+    L = length(x)
+    meanx = mean(x)
+    meany = mean(y)
+    covariancexy = 0
+    variancex = 0
+    variancey = 0
+
+    # Formula for pearson correlation coefficient is covariance divided by the product of the standard deviations.
+    for n in range(L):
+        covariancexy += (x.iloc[n] - meanx) * (y.iloc[n] - meany)
+        variancex += (x.iloc[n] - meanx) ** 2
+        variancey += (y.iloc[n] - meany) ** 2
+    return covariancexy / ((variancex * variancey) ** 0.5)
+
 # Compute and save pearson correlation.
 get_matrix(df, stocks, pearson_corr, 'pearson', 'Pearson')
 
@@ -221,21 +221,21 @@ def spearman_corr(x, y):
     # Function to rank data, using average ranks for ties.
     def rank(data):
         L = length(data)
-        data = [[data[n], n] for n in range(L)]
+        data = pd.Series([[data.iloc[n], n] for n in range(L)])
         data = sort(data)
 
         rank = [0] * L
         i = 0
         while i < L:
-            val = data[i][0]
+            val = data.iloc[i][0]
             j = i
-            while j + 1 < L and data[j + 1][0] == val:
+            while j + 1 < L and data.iloc[j + 1][0] == val:
                 j += 1
             avg_rank = (i + j + 2) / 2
             for k in range(i, j + 1):
-                rank[data[k][1]] = avg_rank
+                rank[data.iloc[k][1]] = avg_rank
             i = j + 1
-        return rank
+        return pd.Series(rank, index=x.index)
 
     # Rank the data and compute pearson correlation on the ranks.
     rankx = rank(x)
@@ -256,9 +256,9 @@ def kendall_corr(x, y):
     # Formula for kendall correlation coefficient is the difference between the number of concordant and discordant pairs divided by the total number of pairs.
     for i in range(L):
         for j in range(i + 1, L):
-            if (x[i] - x[j]) * (y[i] - y[j]) > 0:
+            if (x.iloc[i] - x.iloc[j]) * (y.iloc[i] - y.iloc[j]) > 0:
                 concordant += 1
-            elif (x[i] - x[j]) * (y[i] - y[j]) < 0:
+            elif (x.iloc[i] - x.iloc[j]) * (y.iloc[i] - y.iloc[j]) < 0:
                 discordant += 1
     return (concordant - discordant) / ((L * (L - 1)) / 2)
 
@@ -284,7 +284,7 @@ def greatest_corr(data, stocks, corr, method):
     pair = None
     for i in range(L):
         for j in range(i + 1, L):
-            corr_value = corr(data[stocks[i]].tolist(), data[stocks[j]].tolist())
+            corr_value = corr(data[stocks[i]], data[stocks[j]])
             if corr_value > max_corr:
                 max_corr = corr_value
                 pair = (stocks[i], stocks[j])
@@ -362,10 +362,10 @@ plot_pair(df, pair)
 # Function to normalize stock data on logarithmic scale.
 def normalize(data, pair):
     stocka, stockb = pair
-    a = data[stocka].tolist()
-    b = data[stockb].tolist()
-    norma = [np.log(n) for n in a]
-    normb = [np.log(n) for n in b]
+    a = data[stocka]
+    b = data[stockb]
+    norma = np.log(a)
+    normb = np.log(b)
     return norma, normb
 
 # Normalize the pair of stocks.
@@ -380,17 +380,17 @@ def ols(a, b):
     den = 0
 
     # Formula for OLS regression slope and intercept where slope is the ratio of covariance to variance and intercept is the mean of b minus the slope times the mean of a.
-    for i in range(L):
-        num += (a[i] - meana) * (b[i] - meanb)
-        den += (a[i] - meana) ** 2
+    for n in range(L):
+        num += (a.iloc[n] - meana) * (b.iloc[n] - meanb)
+        den += (a.iloc[n] - meana) ** 2
     slope = num / den
     intercept = meanb - slope * meana
-    residuals = []
-    for n in range(L):
-        residuals.append(b[n] - (slope * a[n] + intercept))
-    residuals_lag = [None] + residuals[:-1]
-    residuals_diff = [None] + [residuals[i] - residuals[i-1] for i in range(1, L)]
+    residuals = pd.Series([b.iloc[n] - (slope * a.iloc[n] + intercept) for n in range(L)], index=a.index)
+
+    residuals_lag = residuals.shift(1)
+    residuals_diff = residuals - residuals_lag
     return residuals, residuals_lag, residuals_diff
+
 
 # Perform OLS regression on the normalized pair of stocks.
 residuals, residuals_lag, residuals_diff = ols(norma, normb)
