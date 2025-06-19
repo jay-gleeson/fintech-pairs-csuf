@@ -12,7 +12,7 @@ import os
 # Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
 # 
 # Note: Only the daily adjusted close price column per each stock will be considered.
-stocks = ['AXP','BAC','C','COF','GS','JPM','MA','USB','V','WFC']
+stocks = ['AXP','BAC','C','COF','GS','JPM','MA','USB','V','WFC'] # Note: Later, only Visa (V), Mastercard (MA), American Express (AXP), and Capital One (COF) are considered.
 df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False, progress=False)['Adj Close']
 
 # Clean dataframe by dropping any columns that are completely empty and forward-filling missing data.
@@ -30,7 +30,6 @@ try:
     # Get the full absolute path.
     full_path = os.path.abspath(filename)
     print(f"\nFile successfully saved to: {full_path}\n")
-
 except Exception as e:
     print(f"\nAn error occurred while saving the file: {e}\n")
 
@@ -126,13 +125,15 @@ def iqr(data):
     def interpolate(quartile):
         pos = quartile * (L - 1)
         low = int(pos)
-        
+
+        # Function to find the minimum of two values.
         def minimum(a, b):
             if a < b:
                 return a
             else:
                 return b
 
+        # Set high index to the next index.
         high = minimum(low + 1, L - 1)
         return data.iloc[low] + (data.iloc[high] - data.iloc[low]) * (pos - low)
 
@@ -146,7 +147,6 @@ stats = pd.DataFrame(columns=stocks, index=['Min','Max','Range','Mean','Variance
 # Iterate through stocks and compute each statistic.
 for ticker in stocks:
     data = df[ticker]
-
     stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
 # Preview statistics.
@@ -160,14 +160,13 @@ try:
     # Get the full absolute path.
     full_path = os.path.abspath(filename)
     print(f"\nFile successfully saved to: {full_path}\n")
-
 except Exception as e:
     print(f"\nAn error occurred while saving the file: {e}\n")
 
 
 # Compute pearson correlation, spearman correlation, and kendall correlation. 
 # Then, find which two stocks are most correlated with each other using each method.
-
+# 
 # Function to compute and export correlation matrix and heatmap.
 def get_matrix(data, stocks, corr, filename_prefix, title):
     matrix = pd.DataFrame(index=stocks, columns=stocks, dtype=float)
@@ -181,13 +180,15 @@ def get_matrix(data, stocks, corr, filename_prefix, title):
     sb.heatmap(matrix, annot=True, cmap='Spectral')
     plt.title(f'{title} Correlation Heatmap')
 
+    # Save heatmap to file directory.
     try:
-        heatmap_filename = f'{filename_prefix}_heatmap.png'
-        plt.savefig(heatmap_filename, dpi=300, bbox_inches='tight')
+        heatmap_filename = f'{filename_prefix}_heatmap'
+        matrix.to_csv(heatmap_filename + '.csv')
+        plt.savefig(heatmap_filename + '.png', dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
-        print(f"Heatmap image successfully saved to: {os.path.abspath(heatmap_filename)}\n")
-    
+        print(f"Heatmap image successfully saved to: {os.path.abspath(heatmap_filename + '.png')}\n")
+        print(f"Heatmap CSV successfully saved to: {os.path.abspath(heatmap_filename + '.csv')}\n")
     except Exception as e:
         print(f"An error occurred while saving the file: {e}\n")
     plt.close()
@@ -223,7 +224,6 @@ def spearman_corr(x, y):
         L = length(data)
         data = pd.Series([[data.iloc[n], n] for n in range(L)])
         data = sort(data)
-
         rank = [0] * L
         i = 0
         while i < L:
@@ -265,40 +265,14 @@ def kendall_corr(x, y):
 # Downsample the dataframe to speed up computation, taking 20% of the data.
 #
 # Function to downsample the dataframe by a given step.
-def downsample_df(df, step):
-    return df.iloc[::step].copy()
+def downsample_df(data, step):
+    return data.iloc[::step].copy()
 
 # Downsample the dataframe to speed up computation.
 df_kendall = downsample_df(df, step=5)
 
 # Compute and save kendall correlation.
 get_matrix(df_kendall, stocks, kendall_corr, 'kendall', 'Kendall')
-
-# Given all correlation methods, find the most correlated pairs of stocks.
-#
-# Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
-stocks = ['V','MA','AXP','COF']  # Note: Discover (DFS) was acquired by Capital One (COF).
-def greatest_corr(data, stocks, corr, method):
-    L = length(stocks)
-    max_corr = 0
-    pair = None
-    for i in range(L):
-        for j in range(i + 1, L):
-            corr_value = corr(data[stocks[i]], data[stocks[j]])
-            if corr_value > max_corr:
-                max_corr = corr_value
-                pair = (stocks[i], stocks[j])
-    print(f"Most correlated pair ({method}): {pair} with correlation {max_corr}")
-    return pair
-
-# Return the most correlated pairs of stocks for each correlation method.
-print("Best correlated pairs by method:")
-pearson_pair = greatest_corr(df, stocks, pearson_corr, 'Pearson')
-spearman_pair = greatest_corr(df, stocks, spearman_corr, 'Spearman')
-kendall_pair = greatest_corr(df, stocks, kendall_corr, 'Kendall')
-
-# Set our new correlated pair to the spearman pair and perform cointegration on it.
-pair = spearman_pair
 
 # Function to get the names of the stocks in the pair.
 def get_stock_names(pair):
@@ -312,10 +286,63 @@ def get_stock_names(pair):
     nameb = stock_names.get(pair[1], pair[1])
     return namea, nameb
 
+# Given all correlation methods, find the most correlated pairs of stocks.
+#
+# Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
+def greatest_corr(stocks, method):
+    # Only consider stocks in new_stocks.
+    relevant_stocks = [n for n in stocks if n in new_stocks]
+
+    # Find the greatest correlation by reading the previously saved correlation CSV files.
+    corr_csv = f'{method.lower()}_heatmap.csv'
+    pair = None
+    max_corr = None
+    if os.path.exists(corr_csv):
+        corr_df = pd.read_csv(corr_csv, index_col=0)
+        for i in relevant_stocks:
+            for j in relevant_stocks:
+                if i != j:
+                    val = float(corr_df.loc[i, j])
+                    if (max_corr is None) or (val > max_corr):
+                        max_corr = val
+                        pair = (i, j)
+        if pair:
+
+            # Put the stock with the lower average daily adjusted close price first in the pair for consistency.
+            if os.path.exists('stats.csv'):
+                stats_df = pd.read_csv('stats.csv', index_col=0)
+                means = {n: float(stats_df.loc['Mean', n]) for n in pair}
+                if means[pair[0]] > means[pair[1]]:
+                    pair = (pair[1], pair[0])
+                
+                # Get the names of the stocks in the pair.
+                namea, nameb = get_stock_names(pair)
+
+                # Print the most correlated pair with their names and correlation value.
+                print(f"Most correlated pair ({method}): {namea} ({pair[0]}) and {nameb} ({pair[1]}) with correlation {max_corr}")
+            else:
+                print(f"Stats CSV file not found. Defaulting to original order: {pair} with correlation {max_corr}")
+    else:
+        print(f"Correlation CSV file '{corr_csv}' not found.")
+    return pair
+
+# Only consider stocks in new_stocks.
+new_stocks = ['V', 'MA', 'AXP', 'COF'] # Note: Discover (DFS) was acquired by Capital One (COF).
+
+# Return the most correlated pairs of stocks for each correlation method.
+print("Best correlated pairs by method:")
+pearson_pair = greatest_corr(stocks, 'Pearson')
+spearman_pair = greatest_corr(stocks, 'Spearman')
+kendall_pair = greatest_corr(stocks, 'Kendall')
+
+# Set our new correlated pair to the spearman pair and perform cointegration on it.
+pair = spearman_pair
+
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
 def plot_pair(data, pair):
-    stocka, stockb = pair
     
+    # Get the names of the stocks in the pair.
+    stocka, stockb = pair
     namea, nameb = get_stock_names(pair)
 
     # Plot the daily adjusted close price of each stock in the pair.
@@ -342,13 +369,13 @@ def plot_pair(data, pair):
     # Export the plot to a file.
     plt.tight_layout()
 
+    # Save plot to file directory.
     try:
         plot_filename = f'{stocka}_{stockb}_price_plot.png'
         plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
         print(f"\nPlot image successfully saved to: {os.path.abspath(plot_filename)}")
-    
     except Exception as e:
         print(f"\nAn error occurred while saving the file: {e}")
     plt.close()
@@ -386,7 +413,6 @@ def ols(a, b):
     slope = num / den
     intercept = meanb - slope * meana
     residuals = pd.Series([b.iloc[n] - (slope * a.iloc[n] + intercept) for n in range(L)], index=a.index)
-
     residuals_lag = residuals.shift(1)
     residuals_diff = residuals - residuals_lag
     return residuals, residuals_lag, residuals_diff
@@ -411,16 +437,15 @@ def plot_residuals(residuals, pair, data):
     plt.ylabel('Residuals')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
+    # Save plot to file directory.
     try:
         residual_plot_filename = f'{stocka}_{stockb}_residuals_plot.png'
         plt.savefig(residual_plot_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
         print(f"\nResidual plot image successfully saved to: {os.path.abspath(residual_plot_filename)}")
-    
     except Exception as e:
         print(f"\nAn error occurred while saving the file: {e}")
-
     plt.close()
 
 # Plot the residuals of the normalized pair of stocks.
