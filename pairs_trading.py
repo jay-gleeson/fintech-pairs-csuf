@@ -452,7 +452,14 @@ gamma_hat = XtX_inversed @ XtY
 
 print(gamma_hat)
 
-# TODO: find out how to apply matricies and how to multiply
+y_pred = gamma_hat * X
+errors = Y - y_pred
+RSS = np.sum(errors ** 2)
+n = len(X)
+se_gamma = np.sqrt(RSS / ((n - 1) * np.sum(X ** 2)))
+t_stat = gamma_hat / se_gamma
+print(t_stat)
+# TODO: try and test for cointegration using outside methods to verify this coder
 
 #In order to test if the data set has stationarity we will use the dickey fuller test
 #def dickey_fuller(residual, max_lag=1):
