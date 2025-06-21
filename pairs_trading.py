@@ -480,14 +480,35 @@ print("STM ADF Statistic:", result[0])
 print("STM p-value:", result[1])
 print("STM Critical Values:")
 
-
-
-
-#In order to test if the data set has stationarity we will use the dickey fuller test
-#def dickey_fuller(residual, max_lag=1):
-
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
-#
+# first a spread chart is made.
+df["spread"] = df[pair[1]] - df[pair[0]]
+# Plot the spread between the two stocks in the pair.
+def plot_spread(data, pair):
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['spread'], label=f'Spread: {nameb} - {namea}', color='green')
+    plt.title(f'Spread between {nameb} and {namea}')
+    plt.xlabel('Date')
+    plt.ylabel('Spread')
+    plt.axhline(0, color='black', linestyle='--', linewidth=0.5)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    plt.legend()
+
+    try:
+        spread_plot_filename = f'{stocka}_{stockb}_spread_plot.png'
+        plt.savefig(spread_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nSpread plot image successfully saved to: {os.path.abspath(spread_plot_filename)}")
+    
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+
+    plt.close()
+plot_spread(df, pair)
 # Concentrate signal with z-scores.
 # 
 # Backtest strategy.
