@@ -510,7 +510,54 @@ def plot_spread(data, pair):
     plt.close()
 plot_spread(df, pair)
 # Concentrate signal with z-scores.
-# 
+# Define z-score to normalize the spread
+df['Z-Score'] = ((df['spread'] - mean(df['spread'])) / stddev(df['spread']))
+
+# Set thresholds for entering and exiting trades
+upper_threshold = 2
+lower_threshold = -2
+
+# Initialize signals
+df['Position'] = 0
+
+# Generate signals for long and short positions
+df['Position'] = np.where(df['Z-Score'] > upper_threshold, -1, df['Position'])  # Short the spread
+df['Position'] = np.where(df['Z-Score'] < lower_threshold, 1, df['Position'])   # Long the spread
+df['Position'] = np.where((df['Z-Score'] < 1) & (df['Z-Score'] > -1), 0, df['Position'])  # Exit
+
+# Plot z-score and positions
+plt.figure(figsize=(10, 6))
+plt.plot(df.index, df['Z-Score'], label='Z-Score')
+plt.axhline(upper_threshold, color='red', linestyle='--', label='Upper Threshold')
+plt.axhline(lower_threshold, color='green', linestyle='--', label='Lower Threshold')
+plt.legend()
+plt.title('Z-Score of the Spread with Trade Signals')
+plt.savefig('z_score_plot.png', dpi=300, bbox_inches='tight') 
+plt.close()  
 # Backtest strategy.
-# 
+df[f'{pair[1]}_Return'] = df[pair[1]].pct_change()
+df[f'{pair[0]}_Return'] = df[pair[0]].pct_change()
+
+# Strategy returns: long spread means buying PEP and shorting KO
+df['Strategy_Return'] = df['Position'].shift(1) * (df[f'{pair[1]}_Return'] - df[f'{pair[0]}_Return'])
+
+# Cumulative returns
+df['Cumulative_Return'] = (1 + df['Strategy_Return']).cumprod()
+
+# Plot cumulative returns
+plt.figure(figsize=(10, 6))
+plt.plot(df.index, df['Cumulative_Return'], label='Cumulative Return from Strategy')
+plt.title('Cumulative Returns of Pairs Trading Strategy')
+plt.legend()
+plt.savefig('cumulative_returns_plot.png', dpi=300, bbox_inches='tight')
+plt.close()
 # Optimize threshholds.
+# Calculate Sharpe Ratio
+sharpe_ratio = df['Strategy_Return'].mean() / df['Strategy_Return'].std() * np.sqrt(252)
+print(f'Sharpe Ratio: {sharpe_ratio}')
+
+# Calculate max drawdown
+cumulative_max = df['Cumulative_Return'].cummax()
+drawdown = (cumulative_max - df['Cumulative_Return']) / cumulative_max
+max_drawdown = drawdown.max()
+print(f'Max Drawdown: {max_drawdown}')
