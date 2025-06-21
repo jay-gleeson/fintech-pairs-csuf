@@ -5,6 +5,9 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import os
 
+# Required library for performing the Augmented Dickey-Fuller test.
+from statsmodels.tsa.stattools import adfuller
+
 
 # Create pandas DataFrame with various financial institutions using yfinance.
 #  
@@ -451,8 +454,62 @@ def plot_residuals(residuals, pair, data):
 # Plot the residuals of the normalized pair of stocks.
 plot_residuals(residuals, pair, df)
 
-# Test residuals for stationarity.
 
+# Test residuals for stationarity.
+# 
+# Enter and clean residuals into a dataframe.
+df_clean = pd.DataFrame({
+    'residual': residuals,
+    'residual_lag': residuals_lag,
+    'residual_diff': residuals_diff
+}).dropna().reset_index(drop=True)
+
+# Greedy implementation of basic ADF test with no lag, no constant, and no trend.
+def basic_adfuller(df):
+    X = df['residual_lag'].to_numpy().reshape(-1, 1)
+    Y = df['residual_diff'].to_numpy().reshape(-1, 1)
+    XtX = X.T @ X
+    XtY = X.T @ Y
+    gamma_hat = XtY / XtX
+    y_pred = X * gamma_hat
+    errors = Y - y_pred
+    RSS = 0
+    for err in errors:
+        RSS += err ** 2
+    n = 0
+    for i in X:
+        n += 1
+    sigma2 = RSS / (n - 1)
+    sum_xsq = 0
+    for x in X:
+        sum_xsq += x ** 2
+    var_gamma = sigma2 / sum_xsq
+    se_gamma = var_gamma ** 0.5
+    gamma_hat_scalar = gamma_hat[0, 0]
+    t_stat = gamma_hat_scalar / se_gamma
+    print("\nBasic ADF T-statistic:", t_stat)
+
+    # Approximate p-value using an approximation error function. 
+    def erf(x):
+        sign = 1 if x >= 0 else -1
+        x = abs(x)
+        t = 1.0 / (1.0 + 0.3275911 * x)
+        a1, a2, a3, a4, a5 = 0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429
+        y = 1.0 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * np.exp(-x * x)
+        return sign * y
+    p_value = 1 - erf(abs(t_stat) / np.sqrt(2))
+    print("Basic ADF p-value:", p_value)
+
+basic_adfuller(df_clean)
+
+# Compare basic ADF test with statsmodels ADF test for p-value and statistic.
+residual_series = df_clean["residual"]
+result = adfuller(residual_series, regression='n', maxlag=0)
+print("\nStatsmodels ADF T-statistic:", result[0])
+
+# If p-value < 0.05, we reject the null hypothesis of non-stationarity.
+# Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
+print("Statsmodels p-value:", result[1])
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
 #
