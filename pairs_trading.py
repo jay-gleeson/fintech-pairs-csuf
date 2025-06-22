@@ -387,7 +387,7 @@ def plot_pair(data, pair):
 plot_pair(df, pair)
 
 
-# Compute engle-granger cointegration.  *** TO BE COMPLETED
+# Compute engle-granger cointegration.
 # 
 # Function to normalize stock data on logarithmic scale.
 def normalize(data, pair):
@@ -454,7 +454,6 @@ def plot_residuals(residuals, pair, data):
 # Plot the residuals of the normalized pair of stocks.
 plot_residuals(residuals, pair, df)
 
-
 # Test residuals for stationarity.
 # 
 # Enter and clean residuals into a dataframe.
@@ -508,13 +507,157 @@ result = adfuller(residual_series, regression='n', maxlag=0)
 print("\nStatsmodels ADF T-statistic:", result[0])
 
 # If p-value < 0.05, we reject the null hypothesis of non-stationarity.
+# 
 # Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
 print("Statsmodels p-value:", result[1])
 
-# Utilize pairs trading methods to find optimal pairs trading strategy.  *** TO BE COMPLETED
-#
-# Concentrate signal with z-scores.
+
+# Utilize pairs trading methods to find optimal pairs trading strategy.
 # 
-# Backtest strategy.
-# 
-# Optimize threshholds.
+# Function to plot the spread between the two stocks in the pair.
+def plot_spread(data, pair):
+
+    # Calculate and plot the spread between the two stocks in the pair.
+    data['spread'] = data[pair[1]] - data[pair[0]]
+
+    # Get the names of the stocks in the pair.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+
+    # Plot spread.
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['spread'], label=f'Spread: {nameb} - {namea}', color='green')
+    plt.title(f'Spread between {nameb} and {namea}')
+    plt.xlabel('Date')
+    plt.ylabel('Spread')
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    try:
+        spread_plot_filename = f'{stocka}_{stockb}_spread_plot.png'
+        plt.savefig(spread_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nSpread plot image successfully saved to: {os.path.abspath(spread_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+# Plot the spread.
+plot_spread(df, pair)
+
+# Function to plot the z-score of the spread.
+def plot_zscore(data):
+
+    # Define z-score to normalize the spread.
+    data['zscore'] = ((data['spread'] - mean(data['spread'])) / stddev(data['spread']))
+
+    # Set thresholds for entering and exiting trades.
+    upper_threshold = 2
+    lower_threshold = -2
+
+    # Generate signals for long and short positions.
+    for n in range(length(data)):
+        z = data['zscore'].iloc[n]
+        if z > upper_threshold:
+            data.loc[data.index[n], 'pos'] = -1  # Short the spread.
+        elif z < lower_threshold:
+            data.loc[data.index[n], 'pos'] = 1   # Long the spread.
+        elif -1 < z < 1:
+            data.loc[data.index[n], 'pos'] = 0   # Exit.
+
+    # Plot z-score.
+    plt.figure(figsize=(10, 6))
+    plt.plot(data.index, data['zscore'], label='Z-Score')
+    plt.axhline(upper_threshold, color='red', linestyle='--', label='Upper Threshold')
+    plt.axhline(lower_threshold, color='green', linestyle='--', label='Lower Threshold')
+    plt.title('Z-Score of the Spread with Trade Signals')
+    plt.xlabel('Date')
+    plt.ylabel('Z-Score')
+    try:
+        zscore_plot_filename = f'{pair[0]}_{pair[1]}_zscore_plot.png'
+        plt.savefig(zscore_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nZ-Score plot image successfully saved to: {os.path.abspath(zscore_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+# Plot the z-score of the spread.
+plot_zscore(df)
+
+# Function to plot the cumulative returns of the pairs trading strategy.
+def plot_cumulative_returns(data, pair):
+    
+    # Compute daily returns for each stock in the pair.
+    data[f'{pair[1]}_return'] = (data[pair[1]] - data[pair[1]].shift(1)) / data[pair[1]].shift(1)
+    data[f'{pair[0]}_return'] = (data[pair[0]] - data[pair[0]].shift(1)) / data[pair[0]].shift(1)
+
+    # Strategy returns.
+    data['strategy_return'] = data['pos'].shift(1) * (data[f'{pair[1]}_return'] - data[f'{pair[0]}_return'])
+
+    # Cumulative returns.
+    cumulative_return = []
+    prod = 1
+    for ret in data['strategy_return'].fillna(0):
+        prod *= (1 + ret)
+        cumulative_return.append(prod)
+    data['cumulative_return'] = cumulative_return
+
+    # Plot cumulative returns.
+    plt.figure(figsize=(10, 6))
+    plt.plot(data.index, data['cumulative_return'], label='Cumulative Return from Strategy')
+    plt.title('Cumulative Returns of Pairs Trading Strategy')
+    plt.xlabel('Date')
+    plt.ylabel('Cumulative Return')
+    try:
+        cumret_plot_filename = f'{pair[0]}_{pair[1]}_cumulative_returns_plot.png'
+        plt.savefig(cumret_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nCumulative returns plot image successfully saved to: {os.path.abspath(cumret_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+# Plot the cumulative returns of the pairs trading strategy.
+plot_cumulative_returns(df, pair)
+
+# Function to return the sharpe ratio and max drawdown of the pairs trading strategy.
+def sharpe_maxdrawdown(data):
+    
+    # Calculate sharpe ratio.
+    count = 0
+    total = 0
+    for n in data['strategy_return']:
+        if not pd.isna(n):
+            total += n
+            count += 1
+    strategy_return_mean = total / count
+    sum_sq = 0
+    mean_val = strategy_return_mean
+    count = 0
+    for n in data['strategy_return']:
+        if not pd.isna(n):
+            sum_sq += (n - mean_val) ** 2
+            count += 1
+    strategy_return_std = (sum_sq / (count - 1)) ** 0.5
+    sharpe_ratio = strategy_return_mean / strategy_return_std * (length(data) ** 0.5)
+    print(f"\nSharpe Ratio: {sharpe_ratio}")
+
+    # Calculate max drawdown.
+    cumulative_max = []
+    current_max = data['cumulative_return'].iloc[0]
+    for n in data['cumulative_return']:
+        if n > current_max:
+            current_max = n
+        cumulative_max.append(current_max)
+    cumulative_max = pd.Series(cumulative_max, index=data.index)
+    drawdown = (cumulative_max - data['cumulative_return']) / cumulative_max
+    max_drawdown = 0
+    for n in drawdown:
+        if n > max_drawdown:
+            max_drawdown = n
+    print(f"Max Drawdown: {max_drawdown}")
+
+# Return the sharpe ratio and max drawdown of the pairs trading strategy.
+sharpe_maxdrawdown(df)
