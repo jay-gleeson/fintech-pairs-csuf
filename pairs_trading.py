@@ -556,8 +556,109 @@ plt.close()
 sharpe_ratio = df['Strategy_Return'].mean() / df['Strategy_Return'].std() * np.sqrt(252)
 print(f'Sharpe Ratio: {sharpe_ratio}')
 
+<<<<<<< Updated upstream
 # Calculate max drawdown
 cumulative_max = df['Cumulative_Return'].cummax()
 drawdown = (cumulative_max - df['Cumulative_Return']) / cumulative_max
 max_drawdown = drawdown.max()
 print(f'Max Drawdown: {max_drawdown}')
+=======
+    # Strategy returns.
+    data['strategy_return'] = data['pos'].shift(1) * (data[f'{pair[1]}_return'] - data[f'{pair[0]}_return'])
+
+    # Cumulative returns.
+    cumulative_return = []
+    prod = 1
+    for ret in data['strategy_return'].fillna(0):
+        prod *= (1 + ret)
+        cumulative_return.append(prod)
+    data['cumulative_return'] = cumulative_return
+
+    # Plot cumulative returns.
+    plt.figure(figsize=(10, 6))
+    plt.plot(data.index, data['cumulative_return'], label='Cumulative Return from Strategy')
+    plt.title('Cumulative Returns of Pairs Trading Strategy')
+    plt.xlabel('Date')
+    plt.ylabel('Cumulative Return')
+    try:
+        cumret_plot_filename = f'{pair[0]}_{pair[1]}_cumulative_returns_plot.png'
+        plt.savefig(cumret_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nCumulative returns plot image successfully saved to: {os.path.abspath(cumret_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+# Plot the cumulative returns of the pairs trading strategy.
+plot_cumulative_returns(df, pair)
+
+# Function to return the sharpe ratio and max drawdown of the pairs trading strategy.
+def sharpe_maxdrawdown(data):
+    
+    # Calculate sharpe ratio.
+    count = 0
+    total = 0
+    for n in data['strategy_return']:
+        if not pd.isna(n):
+            total += n
+            count += 1
+    strategy_return_mean = total / count
+    sum_sq = 0
+    mean_val = strategy_return_mean
+    count = 0
+    for n in data['strategy_return']:
+        if not pd.isna(n):
+            sum_sq += (n - mean_val) ** 2
+            count += 1
+    strategy_return_std = (sum_sq / (count - 1)) ** 0.5
+    sharpe_ratio = strategy_return_mean / strategy_return_std * (length(data) ** 0.5)
+    print(f"\nSharpe Ratio: {sharpe_ratio}")
+
+    # Calculate max drawdown.
+    cumulative_max = []
+    current_max = data['cumulative_return'].iloc[0]
+    for n in data['cumulative_return']:
+        if n > current_max:
+            current_max = n
+        cumulative_max.append(current_max)
+    cumulative_max = pd.Series(cumulative_max, index=data.index)
+    drawdown = (cumulative_max - data['cumulative_return']) / cumulative_max
+    max_drawdown = 0
+    for n in drawdown:
+        if n > max_drawdown:
+            max_drawdown = n
+    print(f"Max Drawdown: {max_drawdown}")
+
+# Return the sharpe ratio and max drawdown of the pairs trading strategy.
+sharpe_maxdrawdown(df)
+
+# pairs trading signals and strategy returns are now computed and plotted.
+# function to calculate z score reqs
+# Calculate the price ratios of the two stocks in the pair.
+price_ratios = normb / norma
+
+# Plot the unmodified price ratios.
+plt.figure(figsize=(10, 5))
+plt.plot(price_ratios, label= f"Unmodified Price Ratio of {pair[1]}:{pair[0]}")
+plt.axhline(y=price_ratios.mean(), color="red", linestyle="--")  # Horizontal line at zero
+plt.autoscale(False)
+plt.title(f"Unmodified Price Ratio of {pair[1]}:{pair[0]}")
+plt.xlabel("Date")
+plt.ylabel("Unmodified Price Ratios")
+plt.legend()
+plt.show()
+# Utilize Panda's rolling() function to provide rolling window calculations.
+price_ratios_mavg5 = price_ratios.rolling(window=5, min_periods = 1).mean()
+price_ratios_mavg60 = price_ratios.rolling(window=60, min_periods = 1).mean()
+price_ratios_std60 = price_ratios.rolling(window=60, min_periods = 1).std()
+
+if price_ratios_std60.isna().iloc[0]:
+  price_ratios_std60.iloc[0] = (0)
+
+z_score_60_5 = (price_ratios_mavg5 - price_ratios_mavg60) / price_ratios_std60
+
+if z_score_60_5.isna().iloc[0]:
+  z_score_60_5.iloc[0] = (0)
+  
+>>>>>>> Stashed changes
