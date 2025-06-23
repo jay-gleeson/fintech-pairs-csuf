@@ -289,6 +289,9 @@ def get_stock_names(pair):
     nameb = stock_names.get(pair[1], pair[1])
     return namea, nameb
 
+# Only consider stocks in new_stocks.
+new_stocks = ['V', 'MA', 'AXP', 'COF'] # Note: Discover (DFS) was acquired by Capital One (COF).
+
 # Given all correlation methods, find the most correlated pairs of stocks.
 #
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
@@ -329,17 +332,25 @@ def greatest_corr(stocks, method):
         print(f"Correlation CSV file '{corr_csv}' not found.")
     return pair
 
-# Only consider stocks in new_stocks.
-new_stocks = ['V', 'MA', 'AXP', 'COF'] # Note: Discover (DFS) was acquired by Capital One (COF).
-
 # Return the most correlated pairs of stocks for each correlation method.
 print("Best correlated pairs by method:")
 pearson_pair = greatest_corr(stocks, 'Pearson')
 spearman_pair = greatest_corr(stocks, 'Spearman')
 kendall_pair = greatest_corr(stocks, 'Kendall')
 
-# Set our new correlated pair to the spearman pair and perform cointegration on it.
-pair = spearman_pair
+# Set pair to be considered for pairs trading as the pair with the highest spearman correlation value.
+# 
+# Function to set and output new pair given spearman correlation highest valued pair.
+def set_pair(spearman_pair):
+
+    # Get the names of the stocks in the pair.
+    stocka, stockb = spearman_pair
+    namea, nameb = get_stock_names(spearman_pair)
+    print(f"\nPair to be considered for pairs trading is {namea} ({stocka}) and {nameb} ({stockb}).")
+    return spearman_pair
+
+# Set pair as spearman pair and display result to output.
+pair = set_pair(spearman_pair)
 
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
 def plot_pair(data, pair):
@@ -494,8 +505,6 @@ def plot_residuals(residuals, pair, data):
 # Plot the residuals of the normalized pair of stocks.
 plot_residuals(residuals, pair, df)
 
-# Test residuals for stationarity.
-# 
 # Enter and clean residuals into a dataframe.
 df_clean = pd.DataFrame({
     'residual': residuals,
@@ -526,7 +535,7 @@ def basic_adfuller(df):
     se_gamma = var_gamma ** 0.5
     gamma_hat_scalar = gamma_hat[0, 0]
     t_stat = gamma_hat_scalar / se_gamma
-    print("Basic ADF T-statistic:", t_stat)
+    print("\nBasic ADF T-statistic:", t_stat)
 
     # Approximate p-value using an approximation error function. 
     def erf(x):
@@ -548,16 +557,6 @@ result = adfuller(residual_series, regression='n', maxlag=0)
 print("\nStatsmodels ADF T-statistic:", result[0])
 
 # If p-value < 0.05, we reject the null hypothesis of non-stationarity.
-# Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
-print("Statsmodels p-value:", result[1])
-
-# Compare basic ADF test with statsmodels ADF test for p-value and statistic.
-residual_series = df_clean["residual"]
-result = adfuller(residual_series, regression='n', maxlag=0)
-print("\nStatsmodels ADF T-statistic:", result[0])
-
-# If p-value < 0.05, we reject the null hypothesis of non-stationarity.
-# 
 # Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
 print("Statsmodels p-value:", result[1])
 
@@ -726,46 +725,60 @@ sharpe_maxdrawdown(df)
 # Get price ratios of the pair.
 price_ratios = df[pair[0]] / df[pair[1]]
 
-# Plot the unmodified price ratios.
-plt.figure(figsize=(10, 6))
-plt.plot(price_ratios, label=f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
-plt.axhline(y=price_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
-plt.autoscale(False)
-plt.title(f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
-plt.xlabel('Date')
-plt.ylabel('Unmodified Price Ratios')
-try:
-    unmod_plot_filename = f'{pair[0]}_{pair[1]}_unmodified_price_ratio_plot.png'
-    plt.savefig(unmod_plot_filename, dpi=300, bbox_inches='tight')
+def plot_unmod_ratio(pair):
+    # Get the names of the stocks in the pair.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+
+    # Plot the unmodified price ratios.
+    plt.figure(figsize=(10, 6))
+    plt.plot(price_ratios, label=f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
+    plt.axhline(y=price_ratios.mean(), color='red', linestyle='--')
+    plt.autoscale(False)
+    plt.title(f'Unmodified Price Ratio of of {namea} ({stocka}) over {nameb} ({stockb})')
+    plt.xlabel('Date')
+    plt.ylabel('Unmodified Price Ratios')
+    try:
+        unmod_plot_filename = f'{pair[0]}_{pair[1]}_unmodified_price_ratio_plot.png'
+        plt.savefig(unmod_plot_filename, dpi=300, bbox_inches='tight')
     
-    # Get the full absolute path.
-    print(f"\nUnmodified price ratio plot image successfully saved to: {os.path.abspath(unmod_plot_filename)}")
-except Exception as e:
-    print(f"\nAn error occurred while saving the file: {e}")
-plt.close()
+        # Get the full absolute path.
+        print(f"\nUnmodified price ratio plot image successfully saved to: {os.path.abspath(unmod_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+plot_unmod_ratio(pair)
 
 # Prerequisites normality and a normal distribution are assured due to the taking of the natural log prior.
 mod_ratios = norma / normb
 z_scores = (mod_ratios - mean(mod_ratios) / stddev(mod_ratios))
 
-# Plot the modified price ratios.
-plt.figure(figsize=(10, 5))
-plt.plot(mod_ratios, label=f'Modified Price Ratio of {pair[0]}:{pair[1]}')
-plt.axhline(y=mod_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
-plt.autoscale(False)
-plt.title(f'Modified Price Ratio of {pair[0]}:{pair[1]}')
-plt.xlabel('Date')
-plt.ylabel('Modified Price Ratios')
-plt.legend()
-try:
-    mod_plot_filename = f'{pair[0]}_{pair[1]}_modified_price_ratio_plot.png'
-    plt.savefig(mod_plot_filename, dpi=300, bbox_inches='tight')
-    
-    # Get the full absolute path.
-    print(f"\nModified price ratio plot image successfully saved to: {os.path.abspath(mod_plot_filename)}")
-except Exception as e:
-    print(f"\nAn error occurred while saving the file: {e}")
-plt.close()
+def plot_mod_pair(pair):
+    # Get the names of the stocks in the pair.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
+
+    # Plot the modified price ratios.
+    plt.figure(figsize=(10, 5))
+    plt.plot(mod_ratios, label=f'Modified Price Ratio of {pair[0]}:{pair[1]}')
+    plt.axhline(y=mod_ratios.mean(), color='red', linestyle='--')
+    plt.autoscale(False)
+    plt.title(f'Modified Price Ratio of {namea} ({stocka}) over {nameb} ({stockb})')
+    plt.xlabel('Date')
+    plt.ylabel('Modified Price Ratios')
+    plt.legend()
+    try:
+        mod_plot_filename = f'{pair[0]}_{pair[1]}_modified_price_ratio_plot.png'
+        plt.savefig(mod_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nModified price ratio plot image successfully saved to: {os.path.abspath(mod_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+plot_mod_pair(pair)
 
 # Create a rolling window within the train set to utilize statistics most applicable and recent to  the timeframe.
 # 
@@ -885,41 +898,45 @@ print(f"Max Drawdown (profit_tracker): {max_drawdown}")
 
 # Function to plot trade signals on the price charts of both stocks in the pair.
 def plot_trade_signals(data, pair):
-    fig, axs = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    fig.suptitle(f'Trade Signals for {pair[0]} and {pair[1]}', fontsize=16)
+    
+    # Plot trade signals on the price charts of both stocks in the pair.
+    # 
+    # Get the names of the stocks in the pair.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
 
-    # Plot stock A with trade signals. 
-    axs[0].plot(data['Date'], data[pair[0]], label=f'{pair[0]} Price', color='blue')
-    buy_v = data[data[f'Buy_{pair[0]}'] > 0]
-    sell_v = data[data[f'Sell_{pair[0]}'] > 0]
-    axs[0].scatter(buy_v['Date'], buy_v[pair[0]], marker='^', color='green', label='Buy', s=100)
-    axs[0].scatter(sell_v['Date'], sell_v[pair[0]], marker='v', color='red', label='Sell', s=100)
-    axs[0].set_title(f'{pair[0]} Price with Trade Signals')
-    axs[0].set_ylabel('Price')
-    axs[0].legend()
-    axs[0].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    # Stock A plots on the top.
+    plt.figure(figsize=(10, 6))
+    plt.subplot(2, 1, 1)
+    plt.plot(data['Date'], data[stocka], label=namea, color='blue', zorder=1)
+    buy_a = data[data[f'Buy_{stocka}'] > 0]
+    sell_a = data[data[f'Sell_{stocka}'] > 0]
+    plt.scatter(buy_a['Date'], buy_a[stocka], marker='^', color='green', edgecolors='black', label='Buy', s=100, zorder=2)
+    plt.scatter(sell_a['Date'], sell_a[stocka], marker='v', color='red', edgecolors='black', label='Sell', s=100, zorder=2)
+    plt.title(f'{namea} ({stocka}) Daily Adjusted Close Price')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
-    # Plot stock B with trade signals.
-    axs[1].plot(data['Date'], data[pair[1]], label=f'{pair[1]} Price', color='purple')
-    buy_ma = data[data[f'Buy_{pair[1]}'] > 0]
-    sell_ma = data[data[f'Sell_{pair[1]}'] > 0]
-    axs[1].scatter(buy_ma['Date'], buy_ma[pair[1]], marker='^', color='green', label='Buy', s=100)
-    axs[1].scatter(sell_ma['Date'], sell_ma[pair[1]], marker='v', color='red', label='Sell', s=100)
-    axs[1].set_title(f'{pair[1]} Price with Trade Signals')
-    axs[1].set_xlabel('Date')
-    axs[1].set_ylabel('Price')
-    axs[1].legend()
-    axs[1].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    # Stock B plots on the bottom.
+    plt.subplot(2, 1, 2)
+    plt.plot(data['Date'], data[stockb], label=nameb, color='red', zorder=1)
+    buy_b = data[data[f'Buy_{stockb}'] > 0]
+    sell_b = data[data[f'Sell_{stockb}'] > 0]
+    plt.scatter(buy_b['Date'], buy_b[stockb], marker='^', color='green', edgecolors='black', label='Buy', s=100, zorder=2)
+    plt.scatter(sell_b['Date'], sell_b[stockb], marker='v', color='red', edgecolors='black', label='Sell', s=100, zorder=2)
+    plt.title(f'{nameb} ({stockb}) Daily Adjusted Close Price')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     plt.tight_layout()
     try:
-        trade_signals_plot_filename = f'{pair[0]}_{pair[1]}_trade_signals_plot.png'
-        plt.savefig(trade_signals_plot_filename, dpi=300, bbox_inches='tight')
-        
-        # Get the full absolute path.
-        print(f"\nTrade signals plot image successfully saved to: {os.path.abspath(trade_signals_plot_filename)}")
+        plt.savefig(f'{stocka}_{stockb}_trade_signals_plot.png', dpi=300, bbox_inches='tight')
+        print(f"\nTrade signals plot image successfully saved to: {os.path.abspath(f'{stocka}_{stockb}_trade_signals_plot.png')}")
     except Exception as e:
         print(f"\nAn error occurred while saving the file: {e}")
     plt.close()
 
-# Plot trade signals on the price charts of both stocks in the pair.
 plot_trade_signals(profit_t, pair)
