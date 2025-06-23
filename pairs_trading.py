@@ -769,3 +769,4 @@ profit_t = trade_action(df, pair)
 
 profit_t.to_csv('profit_tracker.csv', index=False)
 print(profit_tracker.head())
+# Making the plot with signals dependant on Z-score 
