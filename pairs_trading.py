@@ -543,10 +543,8 @@ def plot_spread(data, pair):
 
 # Plot the spread.
 plot_spread(df, pair)
-#Z-Score Function independant of the plotting function for utilizity later down the line
- 
-# Function to plot the z-score of the spread.
 
+# Function to plot the z-score of the spread.
 def plot_zscore(data):
 
     # Define z-score to normalize the spread.
@@ -663,65 +661,83 @@ def sharpe_maxdrawdown(data):
 
 # Return the sharpe ratio and max drawdown of the pairs trading strategy.
 sharpe_maxdrawdown(df)
-#get unmodified price ratios of MA:V.
-price_ratios = df[pair[0]] / df[pair[1]]  # Price ratio of MA to MA
+
+
+# Non-greedy implementation of pairs trading, utilizing libraries.
+# 
+# Get price ratios of the pair.
+price_ratios = df[pair[0]] / df[pair[1]]
 
 # Plot the unmodified price ratios.
-plt.figure(figsize=(10, 5))
-plt.plot(price_ratios, label=f"unmodified Price Ratio of {pair[0]}:{pair[1]}")
-plt.axhline(y=price_ratios.mean(), color="red", linestyle="--")  # Horizontal line at zero
+plt.figure(figsize=(10, 6))
+plt.plot(price_ratios, label=f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
+plt.axhline(y=price_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
 plt.autoscale(False)
-plt.title(f"unmodified Price Ratio of {pair[0]}:{pair[1]}")
-plt.xlabel("Date")
-plt.ylabel("Unmodified Price Ratios")
-plt.legend()
-plt.savefig(f'unmodified_price_ratios_{pair[0]}_{pair[1]}.png', dpi=300, bbox_inches='tight')
+plt.title(f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
+plt.xlabel('Date')
+plt.ylabel('Unmodified Price Ratios')
+try:
+    unmod_plot_filename = f'{pair[0]}_{pair[1]}_unmodified_price_ratio_plot.png'
+    plt.savefig(unmod_plot_filename, dpi=300, bbox_inches='tight')
+    
+    # Get the full absolute path.
+    print(f"\nUnmodified price ratio plot image successfully saved to: {os.path.abspath(unmod_plot_filename)}")
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}")
 plt.close()
-# Get the modified price ratios of MA:V.
+
 # Prerequisites normality and a normal distribution are assured due to the taking of the natural log prior.
 mod_ratios = norma / normb
-z_scores = (mod_ratios - mean(mod_ratios) / stddev(mod_ratios))  #z-scores of the normalized values of V and MA
+z_scores = (mod_ratios - mean(mod_ratios) / stddev(mod_ratios))
 
 # Plot the modified price ratios.
 plt.figure(figsize=(10, 5))
-plt.plot(mod_ratios, label=f"Modified Price Ratio of {pair[0]}:{pair[1]}")
-plt.axhline(y=mod_ratios.mean(), color="red", linestyle="--")  # Horizontal line at zero
+plt.plot(mod_ratios, label=f'Modified Price Ratio of {pair[0]}:{pair[1]}')
+plt.axhline(y=mod_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
 plt.autoscale(False)
-plt.title(f"Modified Price Ratio of {pair[0]}:{pair[1]}")
-plt.xlabel("Date")
-plt.ylabel("Modified Price Ratios")
+plt.title(f'Modified Price Ratio of {pair[0]}:{pair[1]}')
+plt.xlabel('Date')
+plt.ylabel('Modified Price Ratios')
 plt.legend()
-plt.savefig(f'modified_price_ratios_{pair[0]}_{pair[1]}.png', dpi=300, bbox_inches='tight')
+try:
+    mod_plot_filename = f'{pair[0]}_{pair[1]}_modified_price_ratio_plot.png'
+    plt.savefig(mod_plot_filename, dpi=300, bbox_inches='tight')
+    
+    # Get the full absolute path.
+    print(f"\nModified price ratio plot image successfully saved to: {os.path.abspath(mod_plot_filename)}")
+except Exception as e:
+    print(f"\nAn error occurred while saving the file: {e}")
 plt.close()
 
 # Create a rolling window within the train set to utilize statistics most applicable and recent to  the timeframe.
+# 
 # Utilize Panda's rolling() function to provide rolling window calculations.
-price_ratios_mavg5 = price_ratios.rolling(window=5, min_periods = 1).mean()
-price_ratios_mavg60 = price_ratios.rolling(window=60, min_periods = 1).mean()
-price_ratios_std60 = price_ratios.rolling(window=60, min_periods = 1).std()
+price_ratios_mavg3 = price_ratios.rolling(window=3, min_periods = 1).mean()
+price_ratios_mavg30 = price_ratios.rolling(window=30, min_periods = 1).mean()
+price_ratios_std30 = price_ratios.rolling(window=30, min_periods = 1).std()
+if price_ratios_std30.isna().iloc[0]:
+    price_ratios_std30.iloc[0] = (0)
+z_score_30_3 = (price_ratios_mavg3 - price_ratios_mavg30) / price_ratios_std30
+if z_score_30_3.isna().iloc[0]:
+    z_score_30_3.iloc[0] = (0)
 
-if price_ratios_std60.isna().iloc[0]:
-  price_ratios_std60.iloc[0] = (0)
-
-z_score_60_5 = (price_ratios_mavg5 - price_ratios_mavg60) / price_ratios_std60
-
-if z_score_60_5.isna().iloc[0]:
-  z_score_60_5.iloc[0] = (0)
-
-# Creating a new pandas dataset primairly for the profit tracking function.
-profit_tracker = pd.DataFrame(columns=[f'Date', {pair[1]}, {pair[0]}, f'Buy_{pair[1]}', f'Buy_{pair[0]}',
-                                       f'Sell_{pair[1]}', f'Sell_{pair[0]}', 'Position', 'Profit Total', 'Profit Change'])
-# making a function based on the z-score to track profit.
-def trade_action(data, pair):
-    stock_1 = data[pair[0]]
-    stock_2 = data[pair[1]]
-    zscores = z_score_60_5
-    money = 1000
-    position = None
-    profit_tracker = pd.DataFrame(columns=['Date', pair[0], pair[1], 
+# Creating a new pandas dataframe primairly for the profit tracking function.
+profit_tracker = pd.DataFrame(columns=['Date', pair[0], pair[1], 
                                            f'Buy_{pair[0]}', f'Buy_{pair[1]}',
                                            f'Sell_{pair[0]}', f'Sell_{pair[1]}',
                                            'Position', 'Profit Total', 'Profit Change'])
+
+# Function to simulate trading actions based on z-score thresholds, allowing re-entries after 3 bars,
+# and allowing immediate re-entry if z-score remains extreme.
+def trade_action(data, pair):
+    stock_1 = data[pair[0]]
+    stock_2 = data[pair[1]]
+    zscores = z_score_30_3
+    money = 1000
+    position = None
+    bars_since_exit = 3
+    minor_threshold = -0.5
+    major_threshold = 0.5
 
     for i in range(len(zscores)):
         date = data.index[i]
@@ -729,6 +745,7 @@ def trade_action(data, pair):
         s1_price = stock_1.iloc[i]
         s2_price = stock_2.iloc[i]
 
+        # Create a new entry for the profit tracker.
         entry = {
             'Date': date,
             pair[0]: s1_price,
@@ -742,31 +759,101 @@ def trade_action(data, pair):
             'Profit Change': 0
         }
 
-        if z < -1.0 and position != 'long':
-            # Long stock1, short stock2
-            position = 'long'
-            money -= s1_price - s2_price
-            entry[f'Buy_{pair[0]}'] = s1_price
-            entry[f'Sell_{pair[1]}'] = s2_price
-            entry['Position'] = 'Long'
-        elif z > 1.0 and position != 'short':
-            # Short stock1, long stock2
-            position = 'short'
-            money += s1_price - s2_price
-            entry[f'Sell_{pair[0]}'] = s1_price
-            entry[f'Buy_{pair[1]}'] = s2_price
-            entry['Position'] = 'Short'
+        # Only allow new entries if at least 3 bars have passed since last exit,
+        # or if z-score is still extreme (re-entry allowed immediately).
+        can_enter = (bars_since_exit >= 3) or (
+            (position is None) and (z < minor_threshold or z > major_threshold)
+        )
 
+        if position is None and can_enter:
+            if z < minor_threshold:
+                position = 'long'
+                money -= s1_price - s2_price
+                entry[f'Buy_{pair[0]}'] = s1_price
+                entry[f'Sell_{pair[1]}'] = s2_price
+                entry['Position'] = 'Long'
+                bars_since_exit = 0
+            elif z > major_threshold:
+                position = 'short'
+                money += s1_price - s2_price
+                entry[f'Sell_{pair[0]}'] = s1_price
+                entry[f'Buy_{pair[1]}'] = s2_price
+                entry['Position'] = 'Short'
+                bars_since_exit = 0
+            else:
+                bars_since_exit += 1
+        elif position is not None:
+            # Exit position when z-score returns to neutral range
+            if minor_threshold < z < major_threshold:
+                position = None
+                bars_since_exit = 0
+            else:
+                bars_since_exit += 1
+            entry['Position'] = 'Long' if position == 'long' else ('Short' if position == 'short' else '')
+        else:
+            bars_since_exit += 1
+
+        # Calculate profit.
         entry['Profit Total'] = money
         entry['Profit Change'] = money - 1000
         profit_tracker.loc[len(profit_tracker)] = entry
-
     return profit_tracker
 
-
-# making the list of stock data into a list to try and make this function work
+# Track profit using the trade_action function.
 profit_t = trade_action(df, pair)
 
-profit_t.to_csv('profit_tracker.csv', index=False)
-print(profit_tracker.head())
-# Making the plot with signals dependant on Z-score 
+# Print the profit tracking dataframe to the console.
+print("\nProfit Tracking DataFrame:")
+print(profit_t[(profit_t['Position'] == 'Short') | (profit_t['Position'] == 'Long')])
+
+# Final profit analysis.
+print("\nFinal Profit Analysis:")
+print(f"\nFinal Total Profit: ${profit_t['Profit Total'].iloc[-1]:.2f}")
+print(f"Total Profit Change: ${profit_t['Profit Change'].iloc[-1]:.2f}")
+print(f"Total Profit Percentage Change: {((profit_t['Profit Total'].iloc[-1] - 1000) / 1000) * 100:.2f}%")
+if profit_t['Profit Total'].iloc[-1] < 1000:
+    print("\nWarning: The strategy ended with less profit than the initial capital.")
+else:
+    print("\nThe strategy ended with a profit above the initial capital.")
+
+# Function to plot trade signals on the price charts of both stocks in the pair.
+def plot_trade_signals(data, pair):
+    fig, axs = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    fig.suptitle(f'Trade Signals for {pair[0]} and {pair[1]}', fontsize=16)
+
+    # Plot V
+    axs[0].plot(data['Date'], data[pair[0]], label=f'{pair[0]} Price', color='blue')
+    buy_v = data[data[f'Buy_{pair[0]}'] > 0]
+    sell_v = data[data[f'Sell_{pair[0]}'] > 0]
+    axs[0].scatter(buy_v['Date'], buy_v[pair[0]], marker='^', color='green', label='Buy', s=100)
+    axs[0].scatter(sell_v['Date'], sell_v[pair[0]], marker='v', color='red', label='Sell', s=100)
+    axs[0].set_title(f'{pair[0]} Price with Trade Signals')
+    axs[0].set_ylabel('Price')
+    axs[0].legend()
+    axs[0].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    # Plot MA
+    axs[1].plot(data['Date'], data[pair[1]], label=f'{pair[1]} Price', color='purple')
+    buy_ma = data[data[f'Buy_{pair[1]}'] > 0]
+    sell_ma = data[data[f'Sell_{pair[1]}'] > 0]
+    axs[1].scatter(buy_ma['Date'], buy_ma[pair[1]], marker='^', color='green', label='Buy', s=100)
+    axs[1].scatter(sell_ma['Date'], sell_ma[pair[1]], marker='v', color='red', label='Sell', s=100)
+    axs[1].set_title(f'{pair[1]} Price with Trade Signals')
+    axs[1].set_xlabel('Date')
+    axs[1].set_ylabel('Price')
+    axs[1].legend()
+    axs[1].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    plt.tight_layout()
+    try:
+        trade_signals_plot_filename = f'{pair[0]}_{pair[1]}_trade_signals_plot.png'
+        plt.savefig(trade_signals_plot_filename, dpi=300, bbox_inches='tight')
+        
+        # Get the full absolute path.
+        print(f"\nTrade signals plot image successfully saved to: {os.path.abspath(trade_signals_plot_filename)}")
+    except Exception as e:
+        print(f"\nAn error occurred while saving the file: {e}")
+    plt.close()
+
+# Plot trade signals on the price charts of both stocks in the pair.
+plot_trade_signals(profit_t, pair)
