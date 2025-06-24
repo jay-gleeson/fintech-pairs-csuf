@@ -5,15 +5,12 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import os
 
-# Required library for performing the Augmented Dickey-Fuller test.
-from statsmodels.tsa.stattools import adfuller
-
 
 # Create pandas DataFrame with various financial institutions using yfinance.
-#  
-# Downloading data for American Express, Bank of America, Citibank, Capital One, Goldman Sachs, 
-# Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
 # 
+# Downloading data for American Express, Bank of America, Citibank, Capital One, Goldman Sachs,
+# Chase, Mastercard, US Bank, Visa, and Wells Fargo from June 1, 2024 to June 1, 2025.
+#
 # Note: Only the daily adjusted close price column per each stock will be considered.
 stocks = ['AXP', 'BAC', 'C', 'COF', 'GS', 'JPM', 'MA', 'USB', 'V', 'WFC'] # Note: Later, only Visa (V), Mastercard (MA), American Express (AXP), and Capital One (COF) are considered.
 df = yf.download(stocks, start='2024-06-01', end='2025-06-01', auto_adjust=False, progress=False)['Adj Close']
@@ -41,7 +38,7 @@ except Exception as e:
 # and interquartile range of stocks and download to csv for future use. 
 
 # Find length of each column.
-# 
+#
 # Function to find length of each column.
 def length(data):
     count = 0
@@ -83,13 +80,13 @@ def maximum(data):
     return max
 
 # Find range of each stock.
-# 
+#
 # Function to find the range of each stock.
 def spread_range(data):
     return maximum(data) - minimum(data)
 
 # Find mean price of each stock.
-# 
+#
 # Function to find mean daily adjusted close price of each stock.
 def mean(data):
     sum = 0
@@ -98,7 +95,7 @@ def mean(data):
     return sum / length(data)
 
 # Find variance of each stock.
-# 
+#
 # Function to find variance of each stock.
 def variance(data):
     m = mean(data)
@@ -110,7 +107,7 @@ def variance(data):
     return sum_dev / (length(data) - 1)  # Note: Sample variance.
 
 # Find standard deviation of each stock.
-#  
+#
 # Function to find standard deviation of each stock.
 def stddev(data):
 
@@ -128,7 +125,7 @@ def iqr(data):
     def interpolate(quartile):
         pos = quartile * (L - 1)
         low = int(pos)
-
+        
         # Function to find the minimum of two values.
         def minimum(a, b):
             if a < b:
@@ -140,19 +137,20 @@ def iqr(data):
         high = minimum(low + 1, L - 1)
         return data.iloc[low] + (data.iloc[high] - data.iloc[low]) * (pos - low)
 
-    return interpolate(0.75) - interpolate(0.25)  # Return interquartile range, the 75th percentile minus the 25th percentile.
+    # Return interquartile range, the 75th percentile minus the 25th percentile.
+    return interpolate(0.75) - interpolate(0.25)
 
-# Combine statistics into csv.
+# Combine statistics and print to console.
 #
 # Create dataframe with columns as the tickers and the rows as the statistics.
-stats = pd.DataFrame(columns=stocks, index=['Min','Max','Range','Mean','Variance','Std Dev', 'IQR'])
+stats = pd.DataFrame(columns=stocks, index=['Min', 'Max', 'Range', 'Mean', 'Variance', 'Std Dev', 'IQR'])
 
 # Iterate through stocks and compute each statistic.
 for ticker in stocks:
     data = df[ticker]
     stats[ticker] = [minimum(data), maximum(data), spread_range(data), mean(data), variance(data), stddev(data), iqr(data)]
 
-# Preview statistics.
+# Print statistics.
 print(stats)
 
 # Save statistics to file directory.
@@ -289,10 +287,14 @@ def get_stock_names(pair):
     nameb = stock_names.get(pair[1], pair[1])
     return namea, nameb
 
+# Only consider stocks in new_stocks.
+new_stocks = ['V', 'MA', 'AXP', 'COF'] # Note: Discover (DFS) was acquired by Capital One (COF).
+
 # Given all correlation methods, find the most correlated pairs of stocks.
 #
 # Function to find the most correlated pairs of credit network stocks, Visa, Mastercard, American Express, and Capital One.
 def greatest_corr(stocks, method):
+    
     # Only consider stocks in new_stocks.
     relevant_stocks = [n for n in stocks if n in new_stocks]
 
@@ -317,7 +319,7 @@ def greatest_corr(stocks, method):
                 means = {n: float(stats_df.loc['Mean', n]) for n in pair}
                 if means[pair[0]] > means[pair[1]]:
                     pair = (pair[1], pair[0])
-                
+
                 # Get the names of the stocks in the pair.
                 namea, nameb = get_stock_names(pair)
 
@@ -329,25 +331,33 @@ def greatest_corr(stocks, method):
         print(f"Correlation CSV file '{corr_csv}' not found.")
     return pair
 
-# Only consider stocks in new_stocks.
-new_stocks = ['V', 'MA', 'AXP', 'COF'] # Note: Discover (DFS) was acquired by Capital One (COF).
-
 # Return the most correlated pairs of stocks for each correlation method.
-print("Best correlated pairs by method:")
+print("\nBest correlated pairs by method:")
 pearson_pair = greatest_corr(stocks, 'Pearson')
 spearman_pair = greatest_corr(stocks, 'Spearman')
 kendall_pair = greatest_corr(stocks, 'Kendall')
 
-# Set our new correlated pair to the spearman pair and perform cointegration on it.
-pair = spearman_pair
+# Set pair to be considered for pairs trading as the pair with the highest spearman correlation value.
+# 
+# Function to set and output new pair given spearman correlation highest valued pair.
+def set_pair(spearman_pair):
+
+    # Get the names of the stocks in the pair.
+    stocka, stockb = spearman_pair
+    namea, nameb = get_stock_names(spearman_pair)
+    print(f"\nPair to be considered for pairs trading: {namea} ({stocka}) and {nameb} ({stockb})")
+    return spearman_pair
+
+# Set pair as spearman pair and display result to output.
+pair = set_pair(spearman_pair)
 
 # Given the two most correlated pairs of stocks, plot two subplots of the daily adjusted close price of each stock in the pair.
 def plot_pair(data, pair):
-    
+
     # Get the names of the stocks in the pair.
     stocka, stockb = pair
     namea, nameb = get_stock_names(pair)
-
+    
     # Plot the daily adjusted close price of each stock in the pair.
     # 
     # Stock A plots on the top.
@@ -371,7 +381,7 @@ def plot_pair(data, pair):
 
     # Export the plot to a file.
     plt.tight_layout()
-
+    
     # Save plot to file directory.
     try:
         plot_filename = f'{stocka}_{stockb}_price_plot.png'
@@ -420,7 +430,6 @@ def ols(a, b):
     residuals_diff = residuals - residuals_lag
     return residuals, residuals_lag, residuals_diff
 
-
 # Perform OLS regression on the normalized pair of stocks.
 residuals, residuals_lag, residuals_diff = ols(norma, normb)
 
@@ -428,11 +437,14 @@ residuals, residuals_lag, residuals_diff = ols(norma, normb)
 # 
 # Function to plot OLS best fit line plot.
 def plot_ols(pair):
-    L = len(norma)
+    L = length(norma)
     meana = mean(norma)
     meanb = mean(normb)
-    num = ((norma - meana) * (normb - meanb)).sum()
-    den = ((norma - meana) ** 2).sum()
+    num = 0
+    den = 0
+    for n in range(L):
+        num += (norma.iloc[n] - meana) * (normb.iloc[n] - meanb)
+        den += (norma.iloc[n] - meana) ** 2
     slope = num / den
     intercept = meanb - slope * meana
 
@@ -449,7 +461,7 @@ def plot_ols(pair):
     plt.title(f'OLS Best Fit Line: {namea} ({stocka}) vs {nameb} ({stockb})')
     plt.legend()
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-    
+
     # Save plot to file directory.
     try:
         ols_best_fit_filename = f'{stocka}_{stockb}_best_fit_plot.png'
@@ -479,7 +491,7 @@ def plot_residuals(residuals, pair, data):
     plt.xlabel('Date')
     plt.ylabel('Residuals')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-
+    
     # Save plot to file directory.
     try:
         residual_plot_filename = f'{stocka}_{stockb}_residuals_plot.png'
@@ -497,13 +509,9 @@ plot_residuals(residuals, pair, df)
 # Test residuals for stationarity.
 # 
 # Enter and clean residuals into a dataframe.
-df_clean = pd.DataFrame({
-    'residual': residuals,
-    'residual_lag': residuals_lag,
-    'residual_diff': residuals_diff
-}).dropna().reset_index(drop=True)
+df_residuals = pd.DataFrame({'residual': residuals, 'residual_lag': residuals_lag, 'residual_diff': residuals_diff}).dropna().reset_index(drop=True)
 
-# Greedy implementation of basic ADF test with no lag, no constant, and no trend.
+# Basic ADF test with no lag, no constant, and no trend.
 def basic_adfuller(df):
     X = df['residual_lag'].to_numpy().reshape(-1, 1)
     Y = df['residual_diff'].to_numpy().reshape(-1, 1)
@@ -526,7 +534,7 @@ def basic_adfuller(df):
     se_gamma = var_gamma ** 0.5
     gamma_hat_scalar = gamma_hat[0, 0]
     t_stat = gamma_hat_scalar / se_gamma
-    print("Basic ADF T-statistic:", t_stat)
+    print("\nBasic ADF T-statistic:", t_stat.item())
 
     # Approximate p-value using an approximation error function. 
     def erf(x):
@@ -537,33 +545,16 @@ def basic_adfuller(df):
         y = 1.0 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t) * np.exp(-x * x)
         return sign * y
     p_value = 1 - erf(abs(t_stat) / np.sqrt(2))
-    print("Basic ADF p-value:", p_value)
+    print("Basic ADF p-value:", p_value.item())
 
 # Calculate ADF.
-basic_adfuller(df_clean)
-
-# Compare basic ADF test with statsmodels ADF test for p-value and statistic.
-residual_series = df_clean["residual"]
-result = adfuller(residual_series, regression='n', maxlag=0)
-print("\nStatsmodels ADF T-statistic:", result[0])
-
-# If p-value < 0.05, we reject the null hypothesis of non-stationarity.
-# Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
-print("Statsmodels p-value:", result[1])
-
-# Compare basic ADF test with statsmodels ADF test for p-value and statistic.
-residual_series = df_clean["residual"]
-result = adfuller(residual_series, regression='n', maxlag=0)
-print("\nStatsmodels ADF T-statistic:", result[0])
-
-# If p-value < 0.05, we reject the null hypothesis of non-stationarity.
-# 
-# Therefore, the residuals are stationary, and thus, the original pair is cointegrated.
-print("Statsmodels p-value:", result[1])
-
+basic_adfuller(df_residuals)
 
 # Utilize pairs trading methods to find optimal pairs trading strategy.
 # 
+# Create a new dataframe containing only the columns for the selected pair.
+df_trading = df[list(pair)].copy()
+
 # Function to plot the spread between the two stocks in the pair.
 def plot_spread(data, pair):
 
@@ -581,6 +572,8 @@ def plot_spread(data, pair):
     plt.xlabel('Date')
     plt.ylabel('Spread')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+
+    # Save plot to file directory.
     try:
         spread_plot_filename = f'{stocka}_{stockb}_spread_plot.png'
         plt.savefig(spread_plot_filename, dpi=300, bbox_inches='tight')
@@ -592,7 +585,7 @@ def plot_spread(data, pair):
     plt.close()
 
 # Plot the spread.
-plot_spread(df, pair)
+plot_spread(df_trading, pair)
 
 # Function to plot the z-score of the spread and generate trading signals.
 def plot_zscore(data):
@@ -601,14 +594,14 @@ def plot_zscore(data):
     data['zscore'] = (data['spread'] - mean(data['spread'])) / stddev(data['spread'])
 
     # Set thresholds for entering trades.
-    upper_threshold = 2
-    lower_threshold = -2
+    upper_threshold = 1
+    lower_threshold = -1
 
     # Initialize position column.
     data['pos'] = 0
     position = 0
 
-    for n in range(length(data)):
+    for n in range(length(data['zscore'])):
         z = data['zscore'].iloc[n]
         if position == 0:
             if z > upper_threshold:
@@ -630,6 +623,8 @@ def plot_zscore(data):
     plt.xlabel('Date')
     plt.ylabel('Z-Score')
     plt.legend()
+
+    # Save plot to file directory.
     try:
         zscore_plot_filename = f'{pair[0]}_{pair[1]}_zscore_plot.png'
         plt.savefig(zscore_plot_filename, dpi=300, bbox_inches='tight')
@@ -641,7 +636,7 @@ def plot_zscore(data):
     plt.close()
 
 # Plot the z-score of the spread.
-plot_zscore(df)
+plot_zscore(df_trading)
 
 # Function to plot the cumulative returns of the pairs trading strategy.
 def plot_cumulative_returns(data, pair):
@@ -649,6 +644,41 @@ def plot_cumulative_returns(data, pair):
     # Compute daily returns for each stock in the pair.
     data[f'{pair[1]}_return'] = (data[pair[1]] - data[pair[1]].shift(1)) / data[pair[1]].shift(1)
     data[f'{pair[0]}_return'] = (data[pair[0]] - data[pair[0]].shift(1)) / data[pair[0]].shift(1)
+    
+    # Add buy/sell for each stock in df to plot later.
+    buy_col_0 = f'buy_{pair[0]}'
+    buy_col_1 = f'buy_{pair[1]}'
+    sell_col_0 = f'sell_{pair[0]}'
+    sell_col_1 = f'sell_{pair[1]}'
+
+    # Ensure columns exist and are initialized to 0.0 if not already present.
+    for col in [buy_col_0, buy_col_1, sell_col_0, sell_col_1]:
+        if col not in data.columns:
+            data[col] = 0.0
+        else:
+            data[col].values[:] = 0.0
+    
+    # Mark buy/sell signals based on position changes.
+    for n in range(1, length(data['spread'])):
+        pos = data['pos'].iloc[n]
+        prev_pos = data['pos'].iloc[n-1]
+
+        # Enter long: pos changes from 0 to 1.
+        if prev_pos == 0 and pos == 1:
+            data.at[data.index[n], buy_col_0] = data.at[data.index[n], pair[0]]
+            data.at[data.index[n], sell_col_1] = data.at[data.index[n], pair[1]]
+        # Enter short: pos changes from 0 to -1.
+        elif prev_pos == 0 and pos == -1:
+            data.at[data.index[n], sell_col_0] = data.at[data.index[n], pair[0]]
+            data.at[data.index[n], buy_col_1] = data.at[data.index[n], pair[1]]
+        # Exit long: pos changes from 1 to 0.
+        elif prev_pos == 1 and pos == 0:
+            data.at[data.index[n], sell_col_0] = data.at[data.index[n], pair[0]]
+            data.at[data.index[n], buy_col_1] = data.at[data.index[n], pair[1]]
+        # Exit short: pos changes from -1 to 0.
+        elif prev_pos == -1 and pos == 0:
+            data.at[data.index[n], buy_col_0] = data.at[data.index[n], pair[0]]
+            data.at[data.index[n], sell_col_1] = data.at[data.index[n], pair[1]]
 
     # Strategy returns.
     data['strategy_return'] = data['pos'].shift(1) * (data[f'{pair[1]}_return'] - data[f'{pair[0]}_return'])
@@ -656,8 +686,8 @@ def plot_cumulative_returns(data, pair):
     # Cumulative returns.
     cumulative_return = []
     prod = 1
-    for ret in data['strategy_return'].fillna(0):
-        prod *= (1 + ret)
+    for n in data['strategy_return'].fillna(0):
+        prod *= (1 + n)
         cumulative_return.append(prod)
     data['cumulative_return'] = cumulative_return
 
@@ -667,6 +697,8 @@ def plot_cumulative_returns(data, pair):
     plt.title('Cumulative Returns of Pairs Trading Strategy')
     plt.xlabel('Date')
     plt.ylabel('Cumulative Return')
+
+    # Save plot to file directory.
     try:
         cumret_plot_filename = f'{pair[0]}_{pair[1]}_cumulative_returns_plot.png'
         plt.savefig(cumret_plot_filename, dpi=300, bbox_inches='tight')
@@ -678,7 +710,19 @@ def plot_cumulative_returns(data, pair):
     plt.close()
 
 # Plot the cumulative returns of the pairs trading strategy.
-plot_cumulative_returns(df, pair)
+plot_cumulative_returns(df_trading, pair)
+
+# Find overall profit percentage.
+# 
+# Function to return profit percentage from cumulative returns.
+def find_profit(data):
+    initial = data['cumulative_return'].iloc[0]
+    final = data['cumulative_return'].iloc[-1]
+    profit_pct = (final - initial) / initial * 100
+    print(f"\nFinal profit percentage: {profit_pct:.4f}%")
+
+# Return profit percentage from cumulative returns.
+find_profit(df_trading)
 
 # Function to return the sharpe ratio and max drawdown of the pairs trading strategy.
 def sharpe_maxdrawdown(data):
@@ -718,208 +762,52 @@ def sharpe_maxdrawdown(data):
     print(f"Max Drawdown: {max_drawdown}")
 
 # Return the sharpe ratio and max drawdown of the pairs trading strategy.
-sharpe_maxdrawdown(df)
+sharpe_maxdrawdown(df_trading)
 
+def plot_pair_trades(data, pair):
 
-# Non-greedy implementation of pairs trading, utilizing libraries.
-# 
-# Get price ratios of the pair.
-price_ratios = df[pair[0]] / df[pair[1]]
+    # Get stock names.
+    stocka, stockb = pair
+    namea, nameb = get_stock_names(pair)
 
-# Plot the unmodified price ratios.
-plt.figure(figsize=(10, 6))
-plt.plot(price_ratios, label=f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
-plt.axhline(y=price_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
-plt.autoscale(False)
-plt.title(f'Unmodified Price Ratio of {pair[0]}:{pair[1]}')
-plt.xlabel('Date')
-plt.ylabel('Unmodified Price Ratios')
-try:
-    unmod_plot_filename = f'{pair[0]}_{pair[1]}_unmodified_price_ratio_plot.png'
-    plt.savefig(unmod_plot_filename, dpi=300, bbox_inches='tight')
-    
-    # Get the full absolute path.
-    print(f"\nUnmodified price ratio plot image successfully saved to: {os.path.abspath(unmod_plot_filename)}")
-except Exception as e:
-    print(f"\nAn error occurred while saving the file: {e}")
-plt.close()
+    # Top subplot: Stock A.
+    plt.figure(figsize=(12, 7))
+    plt.subplot(2, 1, 1)
+    plt.plot(data.index, data[stocka], label=namea, color='blue', zorder=1)
+    buy_a = data[data[f'buy_{stocka}'] > 0]
+    sell_a = data[data[f'sell_{stocka}'] > 0]
+    plt.scatter(buy_a.index, buy_a[stocka], marker='^', color='green', edgecolors='black', label='Buy', s=100, zorder=2)
+    plt.scatter(sell_a.index, sell_a[stocka], marker='v', color='red', edgecolors='black', label='Sell', s=100, zorder=2)
+    plt.title(f'{namea} ({stocka}) Pair Trade History')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
-# Prerequisites normality and a normal distribution are assured due to the taking of the natural log prior.
-mod_ratios = norma / normb
-z_scores = (mod_ratios - mean(mod_ratios) / stddev(mod_ratios))
-
-# Plot the modified price ratios.
-plt.figure(figsize=(10, 5))
-plt.plot(mod_ratios, label=f'Modified Price Ratio of {pair[0]}:{pair[1]}')
-plt.axhline(y=mod_ratios.mean(), color='red', linestyle='--')  # Horizontal line at zero
-plt.autoscale(False)
-plt.title(f'Modified Price Ratio of {pair[0]}:{pair[1]}')
-plt.xlabel('Date')
-plt.ylabel('Modified Price Ratios')
-plt.legend()
-try:
-    mod_plot_filename = f'{pair[0]}_{pair[1]}_modified_price_ratio_plot.png'
-    plt.savefig(mod_plot_filename, dpi=300, bbox_inches='tight')
-    
-    # Get the full absolute path.
-    print(f"\nModified price ratio plot image successfully saved to: {os.path.abspath(mod_plot_filename)}")
-except Exception as e:
-    print(f"\nAn error occurred while saving the file: {e}")
-plt.close()
-
-# Create a rolling window within the train set to utilize statistics most applicable and recent to  the timeframe.
-# 
-# Utilize Panda's rolling() function to provide rolling window calculations.
-price_ratios_mavg3 = price_ratios.rolling(window=3, min_periods = 1).mean()
-price_ratios_mavg30 = price_ratios.rolling(window=30, min_periods = 1).mean()
-price_ratios_std30 = price_ratios.rolling(window=30, min_periods = 1).std()
-if price_ratios_std30.isna().iloc[0]:
-    price_ratios_std30.iloc[0] = (0)
-z_score_30_3 = (price_ratios_mavg3 - price_ratios_mavg30) / price_ratios_std30
-if z_score_30_3.isna().iloc[0]:
-    z_score_30_3.iloc[0] = (0)
-
-# Creating a new pandas dataframe primairly for the profit tracking function.
-profit_tracker = pd.DataFrame(columns=['Date', pair[0], pair[1], f'Buy_{pair[0]}', f'Buy_{pair[1]}', f'Sell_{pair[0]}', f'Sell_{pair[1]}', 'Position', 'Profit Total', 'Profit Change'])
-
-# Function to simulate trading actions based on z-score thresholds, allowing re-entries after 3 bars,
-# and allowing immediate re-entry if z-score remains extreme.
-def trade_action(data, pair):
-    stock_1 = data[pair[0]]
-    stock_2 = data[pair[1]]
-    zscores = z_score_30_3
-    money = 1000
-    position = None
-    bars_since_exit = 3
-    minor_threshold = -0.5
-    major_threshold = 0.5
-    for i in range(len(zscores)):
-        date = data.index[i]
-        z = zscores.iloc[i]
-        s1_price = stock_1.iloc[i]
-        s2_price = stock_2.iloc[i]
-
-        # Create a new entry for the profit tracker.
-        entry = {
-            'Date': date,
-            pair[0]: s1_price,
-            pair[1]: s2_price,
-            f'Buy_{pair[0]}': 0,
-            f'Buy_{pair[1]}': 0,
-            f'Sell_{pair[0]}': 0,
-            f'Sell_{pair[1]}': 0,
-            'Position': '',
-            'Profit Total': 0,
-            'Profit Change': 0
-        }
-
-        # Only allow new entries if at least 3 bars have passed since last exit,
-        # or if z-score is still extreme (re-entry allowed immediately).
-        can_enter = (bars_since_exit >= 3) or (
-            (position is None) and (z < minor_threshold or z > major_threshold)
-        )
-        if position is None and can_enter:
-            if z < minor_threshold:
-                position = 'long'
-                money -= s1_price - s2_price
-                entry[f'Buy_{pair[0]}'] = s1_price
-                entry[f'Sell_{pair[1]}'] = s2_price
-                entry['Position'] = 'Long'
-                bars_since_exit = 0
-            elif z > major_threshold:
-                position = 'short'
-                money += s1_price - s2_price
-                entry[f'Sell_{pair[0]}'] = s1_price
-                entry[f'Buy_{pair[1]}'] = s2_price
-                entry['Position'] = 'Short'
-                bars_since_exit = 0
-            else:
-                bars_since_exit += 1
-        elif position is not None:
-            # Exit position when z-score returns to neutral range
-            if minor_threshold < z < major_threshold:
-                position = None
-                bars_since_exit = 0
-            else:
-                bars_since_exit += 1
-            entry['Position'] = 'Long' if position == 'long' else ('Short' if position == 'short' else '')
-        else:
-            bars_since_exit += 1
-
-        # Calculate profit.
-        entry['Profit Total'] = money
-        entry['Profit Change'] = money - 1000
-        profit_tracker.loc[len(profit_tracker)] = entry
-    return profit_tracker
-
-# Track profit using the trade_action function.
-profit_t = trade_action(df, pair)
-
-# Print the profit tracking dataframe to the console.
-print("\nProfit Tracking DataFrame:")
-print(profit_t[(profit_t['Position'] == 'Short') | (profit_t['Position'] == 'Long')])
-
-# Final profit analysis.
-print("\nFinal Profit Analysis:")
-print(f"\nFinal Total Profit: ${profit_t['Profit Total'].iloc[-1]:.2f}")
-print(f"Total Profit Change: ${profit_t['Profit Change'].iloc[-1]:.2f}")
-print(f"Total Profit Percentage Change: {((profit_t['Profit Total'].iloc[-1] - 1000) / 1000) * 100:.2f}%")
-if profit_t['Profit Total'].iloc[-1] < 1000:
-    print("\nWarning: The strategy ended with less profit than the initial capital.")
-else:
-    print("\nThe strategy ended with a profit above the initial capital.")
-
-# Calculate sharpe ratio and max drawdown.
-# Calculate Sharpe ratio.
-returns = profit_tracker['Profit Total'].diff().fillna(0)
-mean_return = returns.mean()
-std_return = returns.std()
-sharpe_ratio = mean_return / std_return * (len(returns) ** 0.5)
-print(f"\nSharpe Ratio (profit_tracker): {sharpe_ratio}")
-
-# Calculate max drawdown.
-cum_max = profit_tracker['Profit Total'].cummax()
-drawdown = (cum_max - profit_tracker['Profit Total']) / cum_max
-max_drawdown = drawdown.max()
-print(f"Max Drawdown (profit_tracker): {max_drawdown}")
-
-# Function to plot trade signals on the price charts of both stocks in the pair.
-def plot_trade_signals(data, pair):
-    fig, axs = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    fig.suptitle(f'Trade Signals for {pair[0]} and {pair[1]}', fontsize=16)
-
-    # Plot stock A with trade signals. 
-    axs[0].plot(data['Date'], data[pair[0]], label=f'{pair[0]} Price', color='blue')
-    buy_v = data[data[f'Buy_{pair[0]}'] > 0]
-    sell_v = data[data[f'Sell_{pair[0]}'] > 0]
-    axs[0].scatter(buy_v['Date'], buy_v[pair[0]], marker='^', color='green', label='Buy', s=100)
-    axs[0].scatter(sell_v['Date'], sell_v[pair[0]], marker='v', color='red', label='Sell', s=100)
-    axs[0].set_title(f'{pair[0]} Price with Trade Signals')
-    axs[0].set_ylabel('Price')
-    axs[0].legend()
-    axs[0].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-
-    # Plot stock B with trade signals.
-    axs[1].plot(data['Date'], data[pair[1]], label=f'{pair[1]} Price', color='purple')
-    buy_ma = data[data[f'Buy_{pair[1]}'] > 0]
-    sell_ma = data[data[f'Sell_{pair[1]}'] > 0]
-    axs[1].scatter(buy_ma['Date'], buy_ma[pair[1]], marker='^', color='green', label='Buy', s=100)
-    axs[1].scatter(sell_ma['Date'], sell_ma[pair[1]], marker='v', color='red', label='Sell', s=100)
-    axs[1].set_title(f'{pair[1]} Price with Trade Signals')
-    axs[1].set_xlabel('Date')
-    axs[1].set_ylabel('Price')
-    axs[1].legend()
-    axs[1].grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    # Bottom subplot: Stock B.
+    plt.subplot(2, 1, 2)
+    plt.plot(data.index, data[stockb], label=nameb, color='red', zorder=1)
+    buy_b = data[data[f'buy_{stockb}'] > 0]
+    sell_b = data[data[f'sell_{stockb}'] > 0]
+    plt.scatter(buy_b.index, buy_b[stockb], marker='^', color='green', edgecolors='black', label='Buy', s=100, zorder=2)
+    plt.scatter(sell_b.index, sell_b[stockb], marker='v', color='red', edgecolors='black', label='Sell', s=100, zorder=2)
+    plt.title(f'{nameb} ({stockb}) Pair Trade History')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     plt.tight_layout()
+    
+    # Save plot to file directory.
     try:
-        trade_signals_plot_filename = f'{pair[0]}_{pair[1]}_trade_signals_plot.png'
-        plt.savefig(trade_signals_plot_filename, dpi=300, bbox_inches='tight')
+        plot_pair_filename = f'{pair[0]}_{pair[1]}_plot_pair.png'
+        plt.savefig(plot_pair_filename, dpi=300, bbox_inches='tight')
         
         # Get the full absolute path.
-        print(f"\nTrade signals plot image successfully saved to: {os.path.abspath(trade_signals_plot_filename)}")
+        print(f"\nPlot pair image successfully saved to: {os.path.abspath(plot_pair_filename)}")
     except Exception as e:
         print(f"\nAn error occurred while saving the file: {e}")
     plt.close()
 
-# Plot trade signals on the price charts of both stocks in the pair.
-plot_trade_signals(profit_t, pair)
+# Plot the pair trades.
+plot_pair_trades(df_trading, pair)
