@@ -51,7 +51,7 @@ _Note: A Sharpe Ratio below one indicates a non-optimal risk-adjusted return, me
 
 Below is a copy of our original presentation for the Project RAISE Summer Research Symposium at California State University Fullerton.
 
-![Presentation](https://github.com/user-attachments/assets/2f7eb327-a7a8-4d52-aa83-249a345aeaec)
+![Presentation](https://github.com/user-attachments/assets/2adffffc-7722-47d6-88e4-0900ad961dcf)
 
 
 ## 📖 References
