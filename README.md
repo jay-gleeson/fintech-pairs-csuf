@@ -4,7 +4,7 @@ Pairs trading project to find correlation, cointegration, and perform pairs trad
 Project originally completed by [Jay Gleeson](https://github.com/jay-gleeson/) and [Reyli Hernandez](https://github.com/rey-hern). This project was conducted with the help of the [CIC | PCUBED](https://www.fullerton.edu/ecs/cicpcubed/) organization at California State University, Fullerton.
 
 ## Background 🗣️
-   Visa (V) and Mastercard (MA) are two dominant players in the global payments industry, operating as credit card networks that facilitate cashless transactions. Unlike issuers, these companies serve solely as payment networks, forming partnerships with numerous banks while remaining independent from any single issuer. This business model not only sets them apart from competitors like American Express and Discover ([recently acquired by Capital One Financial Corp](www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover).¹) but also aligns them closely with each other in terms of market behavior and economic exposure. Given that [82% of American adults own a credit card](www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics/),² it's no surprise that these networks hold a prominent position in the stock market.
+   Visa (V) and Mastercard (MA) are two dominant players in the global payments industry, operating as credit card networks that facilitate cashless transactions. Unlike issuers, these companies serve solely as payment networks, forming partnerships with numerous banks while remaining independent from any single issuer. This business model not only sets them apart from competitors like American Express and Discover ([recently acquired by Capital One Financial Corp](https://www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover).¹) but also aligns them closely with each other in terms of market behavior and economic exposure. Given that [82% of American adults own a credit card](https://www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics),² it's no surprise that these networks hold a prominent position in the stock market.
 
    Their structural similarities and high correlation make Visa and Mastercard ideal candidates for pairs trading, [a market-neutral strategy rooted in statistical arbitrage](https://www.sciencedirect.com/science/article/abs/pii/S1062940820301856).³ By analyzing historical price trends, correlation, and cointegration, this approach seeks to exploit pricing inefficiencies between the two stocks. Utilizing traditional pairs trading methods along with an efficient solution heuristic, investors may uncover opportunities for low-risk, profitable returns based on the consistent relationship between these two financial institutions.
 
@@ -44,7 +44,7 @@ _Note: A Sharpe Ratio below one indicates a non-optimal risk-adjusted return, me
 
 ### Method 2: Google Colab
 1. Open .py in Google Colab.
-   See: [Open in Colab](https://github.com/jay-gleeson/fintech-pairs-csuf/blob/main/archive/pairs_trading.ipynb).
+   See: [Open in Colab](archive/pairs_trading.ipynb).
 2. Run Jupyter Notebook via Runtime >> Run All or Ctrl+F9.
 
 ## Presentation 🗨️
@@ -55,8 +55,8 @@ Below is a copy of our original presentation for the Project RAISE Summer Resear
 
 
 ## 📖 References
-¹ Soheili, Sie, and Danielle Dietz. “Capital One Completes Acquisition of Discover.” _Business Wire_, 18 May 2025, [www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover](www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover).
+¹ Soheili, Sie, and Danielle Dietz. “Capital One Completes Acquisition of Discover.” _Business Wire_, 18 May 2025, [www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover](https://www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover).
 
-² Martin, Erik J. "Credit card ownership and usage statistics." _Bankrate_. 21 December 2023, [www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics/](www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics/).
+² Martin, Erik J. "Credit card ownership and usage statistics." _Bankrate_. 21 December 2023, [www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics/](https://www.bankrate.com/credit-cards/news/credit-card-ownership-usage-statistics).
 
 ³ Lin, Tsai-Yu, et al. “Multi-asset pair-trading strategy: A statistical learning approach.” _The North American Journal of Economics and Finance_, vol. 55, Jan. 2021, p. 101295, [https://doi.org/10.1016/j.najef.2020.101295](https://doi.org/10.1016/j.najef.2020.101295).
