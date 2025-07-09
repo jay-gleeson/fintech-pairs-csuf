@@ -1,3 +1,17 @@
+<div align="center">
+  <img alt="GitHub License" src="https://img.shields.io/github/license/jay-gleeson/fintech-pairs-csuf">
+  <img src="https://img.shields.io/badge/Python-3776AB?logo=python&amp;logoColor=fff" alt="Python">
+  <img src="https://img.shields.io/badge/Jupyter_Notebook-F37626?logo=jupyter&amp;logoColor=fff" alt="Jupyter Notebook">
+  <img src="https://img.shields.io/badge/Google%20Colab-F9AB00?logo=googlecolab&amp;logoColor=fff" alt="Google Colab">
+  <img src="https://img.shields.io/badge/-yfinance-410093?logo=yfinance&amp;logoColor=fff" alt="yfinance">
+  <img src="https://custom-icon-badges.demolab.com/badge/Matplotlib-71D291?logo=matplotlib&amp;logoColor=fff" alt="Matplotlib">
+  <img src="https://img.shields.io/badge/NumPy-4DABCF?logo=numpy&amp;logoColor=fff" alt="NumPy">
+  <img src="https://img.shields.io/badge/Pandas-150458?logo=pandas&amp;logoColor=fff" alt="Pandas">
+  <img src="https://img.shields.io/badge/-Seaborn-6BA1AE?logo=seaborn&amp;logoColor=fff" alt="Seaborn">
+  <img src="https://img.shields.io/badge/Visa-1A1F71?logo=visa&amp;logoColor=fff" alt="Visa">
+  <img src="https://img.shields.io/badge/MasterCard-EB001B?logo=mastercard&amp;logoColor=fff" alt="MasterCard">
+</div>
+
 # Visa (V) versus Mastercard (MA) Pairs Trading 💳
 Pairs trading project to find correlation, cointegration, and perform pairs trading methods on credit networks Visa and Mastercard. 🏦
 
