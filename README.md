@@ -8,8 +8,6 @@
   <img src="https://img.shields.io/badge/NumPy-4DABCF?logo=numpy&amp;logoColor=fff" alt="NumPy">
   <img src="https://img.shields.io/badge/Pandas-150458?logo=pandas&amp;logoColor=fff" alt="Pandas">
   <img src="https://img.shields.io/badge/-Seaborn-6BA1AE?logo=seaborn&amp;logoColor=fff" alt="Seaborn">
-  <img src="https://img.shields.io/badge/Visa-1A1F71?logo=visa&amp;logoColor=fff" alt="Visa">
-  <img src="https://img.shields.io/badge/MasterCard-EB001B?logo=mastercard&amp;logoColor=fff" alt="MasterCard">
 </div>
 
 # Visa (V) versus Mastercard (MA) Pairs Trading 💳
@@ -57,7 +55,7 @@ _Note: A Sharpe Ratio below one indicates a non-optimal risk-adjusted return, me
    ```
 
 ### Method 2: Google Colab
-1. Open .py in Google Colab.
+1. Open .ipynb in Google Colab.
    See: [Open in Colab](archive/pairs_trading.ipynb).
 2. Run Jupyter Notebook via Runtime >> Run All or Ctrl+F9.
 
