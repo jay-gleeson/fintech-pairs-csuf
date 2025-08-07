@@ -59,6 +59,12 @@ _Note: A Sharpe Ratio below one indicates a non-optimal risk-adjusted return, me
    See: [Open in Colab](archive/pairs_trading.ipynb).
 2. Run Jupyter Notebook via Runtime >> Run All or Ctrl+F9.
 
+## Presentation 🗨️
+
+Below is a copy of the original presentation for the Project RAISE Summer Research Symposium 2025 at California State University Fullerton.
+
+![Presentation](https://github.com/user-attachments/assets/2adffffc-7722-47d6-88e4-0900ad961dcf)
+
 
 ## 📖 References
 ¹ Soheili, Sie, and Danielle Dietz. “Capital One Completes Acquisition of Discover.” _Business Wire_, 18 May 2025, [www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover](https://www.businesswire.com/news/home/20250517147002/en/Capital-One-Completes-Acquisition-of-Discover).
