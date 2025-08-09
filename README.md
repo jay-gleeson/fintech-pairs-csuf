@@ -56,7 +56,7 @@ _Note: A Sharpe Ratio below one indicates a non-optimal risk-adjusted return, me
 
 ### Method 2: Google Colab
 1. Open .ipynb in Google Colab.
-   See: [Open in Colab](archive/pairs_trading.ipynb).
+   See: [Open in Colab](https://colab.research.google.com/github/jay-gleeson/fintech-pairs-csuf/blob/main/archive/pairs_trading.ipynb).
 2. Run Jupyter Notebook via Runtime >> Run All or Ctrl+F9.
 
 ## Presentation 🗨️
